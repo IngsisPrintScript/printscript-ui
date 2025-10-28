@@ -2,13 +2,16 @@ import {useMutation, UseMutationResult, useQuery} from 'react-query';
 import {CreateSnippet, PaginatedSnippets, Snippet, UpdateSnippet} from './snippet.ts';
 import {SnippetOperations} from "./snippetOperations.ts";
 import {PaginatedUsers} from "./users.ts";
-import {FakeSnippetOperations} from "./mock/fakeSnippetOperations.ts";
+// import {FakeSnippetOperations} from "./mock/fakeSnippetOperations.ts";
 import {TestCase} from "../types/TestCase.ts";
 import {FileType} from "../types/FileType.ts";
 import {Rule} from "../types/Rule.ts";
+import { RealSnippetOperations } from './realSnippetOperations.ts';
 // import {useAuth0} from "@auth0/auth0-react";
 // import {useEffect} from "react";
 
+
+let snippetOperationsInstance: SnippetOperations | null = null;
 
 export const useSnippetsOperations = () => {
   // const {getAccessTokenSilently} = useAuth0()
@@ -21,9 +24,14 @@ export const useSnippetsOperations = () => {
   //         .catch(error => console.error(error));
   // });
 
-  const snippetOperations: SnippetOperations = new FakeSnippetOperations(/* getAccessTokenSilently */); // TODO: Replace with your implementation
+  // Singleton pattern para mantener la misma instancia
+  if (!snippetOperationsInstance) {
+    //snippetOperationsInstance = new FakeSnippetOperations(/* getAccessTokenSilently */); 
+    // TODO: Replace with RealSnippetOperations when ready
+    snippetOperationsInstance = new RealSnippetOperations();
+  }
 
-  return snippetOperations
+  return snippetOperationsInstance;
 }
 
 export const useGetSnippets = (page: number = 0, pageSize: number = 10, snippetName?: string) => {
