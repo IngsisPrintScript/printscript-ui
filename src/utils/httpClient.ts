@@ -1,3 +1,5 @@
+import {getToken} from "../auth/tokenProvider.ts";
+
 export interface HttpError {
   status: number;
   message: string;
@@ -22,11 +24,10 @@ export class HttpClient {
       'Content-Type': 'application/json',
     };
 
-    // TODO: Agregar token de Auth0 cuando esté habilitado
-    // const token = getAccessTokenSilently();
-    // if (token) {
-    //   defaultHeaders['Authorization'] = `Bearer ${token}`;
-    // }
+    const token = await getToken();
+    if (token) {
+      defaultHeaders["Authorization"] = `Bearer ${token}`;
+    }
 
     const response = await fetch(url, {
       ...options,
