@@ -6,7 +6,6 @@ import {QueryClient, QueryClientProvider} from "react-query";
 import RulesScreen from "./screens/Rules.tsx";
 import { registerTokenGetter } from './auth/tokenProvider.ts';
 import {Auth0Provider, useAuth0, withAuthenticationRequired} from '@auth0/auth0-react';
-// import {withAuthenticationRequired} from "@auth0/auth0-react";
 
 const router = createBrowserRouter([
     {
@@ -45,7 +44,7 @@ const App = () => {
             domain={import.meta.env.VITE_AUTH0_DOMAIN}
             clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
             authorizationParams={{
-                redirect_uri: window.location.origin,
+                redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL,
                 audience: import.meta.env.VITE_AUTH0_AUDIENCE,
             }}
             cacheLocation="localstorage"
@@ -58,4 +57,4 @@ const App = () => {
 // To enable Auth0 integration change the following line
 export default App;
 // for this one:
-// export default withAuthenticationRequired(App);
+//export default withAuthenticationRequired(App);

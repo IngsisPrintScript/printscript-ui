@@ -11,12 +11,13 @@ import { TestCase } from '../types/TestCase';
 import { TestCaseResult } from './queries';
 import { FileType } from '../types/FileType';
 import { Rule } from '../types/Rule';
+import { getToken } from '../auth/tokenProvider';
+
 
 export class RealSnippetOperations implements SnippetOperations {
   
   private currentSnippetId: string | null = null;
-  
-  
+
   setCurrentSnippetId(id: string | null): void {
     this.currentSnippetId = id;
   }
@@ -34,13 +35,18 @@ export class RealSnippetOperations implements SnippetOperations {
       // Usamos POST como workaround para enviar el body
       const baseURL = process.env.VITE_API_BASE_URL || 'http://localhost:8080';
       const url = `${baseURL}/snippets/list`;
-      
+
+      const token = await getToken();
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: filterBody ? JSON.stringify(filterBody) : "{}"
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
