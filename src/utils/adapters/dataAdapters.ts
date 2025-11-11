@@ -54,6 +54,23 @@ function mapComplianceEnum(
   return 'pending';
 }
 
+export type TestRunResultDTO = {
+  status: 'PASSED' | 'FAILED';
+  message?: string;
+  outputs: string[];
+  inputs: string[];
+};
+
+export type SnippetTestsStatusDTO = {
+  snippetId: string;
+  snippetName: string;
+  testStatuses: TestValidateDTO[];
+};
+
+export type TestValidateDTO = {
+  testId: string;
+  status: 'PASSED' | 'FAILED';
+};
 
 export function adaptBackendSnippetToUI(backendSnippet: BackendSnippet): Snippet {
   // TODO: Extraer author de snippetOwnerId si es necesario
@@ -96,8 +113,8 @@ export function adaptBackendTestCaseToUI(backendTestCase: BackendTestCase): Test
   return {
     id: backendTestCase.id,
     name: backendTestCase.name,
-    input: backendTestCase.input,
-    output: backendTestCase.output,
+    inputs: backendTestCase.input,
+    expectedOutputs: backendTestCase.output,
   };
 }
 

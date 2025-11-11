@@ -12,6 +12,7 @@ import { TestCaseResult } from './queries';
 import { FileType } from '../types/FileType';
 import { Rule } from '../types/Rule';
 import { getToken } from '../auth/tokenProvider';
+import {adaptBackendTestCaseToUI, BackendTestCase} from "./adapters/dataAdapters.ts";
 
 
 export class RealSnippetOperations implements SnippetOperations {
@@ -21,22 +22,22 @@ export class RealSnippetOperations implements SnippetOperations {
   setCurrentSnippetId(id: string | null): void {
     this.currentSnippetId = id;
   }
- 
+
+
   async listSnippetDescriptors(
-    page: number,
-    pageSize: number,
-    snippetName?: string
+      page: number,
+      pageSize: number,
+      snippetName?: string
   ): Promise<PaginatedSnippets> {
     try {
-      // Backend usa GET con body para filtros (raro pero así está)
-      const filterBody = snippetName ? { name: snippetName } : null;
-      
-      // Backend espera GET con @RequestBody pero el navegador no permite body en GET
-      // Usamos POST como workaround para enviar el body
       const baseURL = process.env.VITE_API_BASE_URL || 'http://localhost:8080';
-      const url = `${baseURL}/snippets/list`;
+      const url = `${baseURL}/snippets/filter`;
 
       const token = await getToken();
+
+      // Si no hay filtros, no enviamos body
+      const hasFilters = snippetName; // aquí puedes agregar más condiciones si agregas otros filtros
+      const body = hasFilters ? JSON.stringify({ name: snippetName }) : undefined;
 
       const response = await fetch(url, {
         method: 'POST',
@@ -44,16 +45,15 @@ export class RealSnippetOperations implements SnippetOperations {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: filterBody ? JSON.stringify(filterBody) : "{}"
+        body,
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
-      // El backend devuelve List<Snippet>
+
       return {
         page,
         page_size: pageSize,
@@ -86,6 +86,7 @@ export class RealSnippetOperations implements SnippetOperations {
     if (lintStatus === 'VALID' && formatStatus === 'VALID') return 'compliant';
     if (lintStatus === 'INVALID' || formatStatus === 'INVALID') return 'not-compliant';
     if (lintStatus === 'LINTING' || formatStatus === 'FORMATTING') return 'pending';
+    if (lintStatus === 'NOT_LINTED' || formatStatus === 'NOT_FORMAT') return 'pending';
     return 'pending';
   }
 
@@ -112,19 +113,19 @@ export class RealSnippetOperations implements SnippetOperations {
     }
   }
 
-
   async getSnippetById(id: string): Promise<Snippet | undefined> {
     try {
-      // Obtenemos el Snippet completo con todos los datos
-      const snippetData = await httpClient.get<any>(`/snippets/snippet`, { id });
-      const contentData = await httpClient.get<{name: string, description: string, language: string, content: string}>(`/snippets/${id}`);
-      
-      // Combinamos los datos
-      return this.adaptBackendSnippet({
-        ...snippetData,
-        content: contentData.content,
-      });
-    } catch (error) {
+      const { data } = await httpClient.get<any>(`/snippets/${id}`);
+      return this.adaptBackendSnippet(data);
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        console.warn('Access forbidden: user has no permission to view this snippet');
+        return undefined;
+      }
+      if (error.response?.status === 404) {
+        console.warn('Snippet not found');
+        return undefined;
+      }
       console.error('Error getting snippet:', error);
       return undefined;
     }
@@ -164,7 +165,7 @@ export class RealSnippetOperations implements SnippetOperations {
 
   async deleteSnippet(id: string): Promise<string> {
     try {
-      await httpClient.delete<void>(`/snippets/${id}`);
+      await httpClient.delete<void>(`/snippets/${this.currentSnippetId || id}`);
       return id;
     } catch (error) {
       console.error('Error deleting snippet:', error);
@@ -197,7 +198,7 @@ export class RealSnippetOperations implements SnippetOperations {
   async shareSnippet(snippetId: string, userId: string): Promise<Snippet> {
     try {
       const response = await httpClient.post<Snippet>(
-        `/snippets/${snippetId}/share`,
+        `/snippets/${snippetId || this.currentSnippetId}/share`,
         { userId }
       );
       return response;
@@ -261,58 +262,54 @@ export class RealSnippetOperations implements SnippetOperations {
     }
   }
 
-
   async getTestCases(): Promise<TestCase[]> {
-    try {
-      // Backend no tiene endpoint de GET visible
-      // Retornamos array vacío por ahora
-      return [];
-    } catch (error) {
-      console.error('Error getting test cases:', error);
-      return [];
-    }
+    if (!this.currentSnippetId) throw new Error('snippetId no seteado');
+    const response = await httpClient.get<BackendTestCase[]>(`/test/${this.currentSnippetId}`);
+    return response.map(adaptBackendTestCaseToUI);
   }
 
   async postTestCase(testCase: Partial<TestCase>): Promise<TestCase> {
-    try {
-      // TODO: Necesitamos snippetId para crear el test
-      // La interfaz de TestCase no tiene snippetId
-      const createDTO = [{
-        snippetId: 'placeholder', // TODO: Obtener snippetId de alguna forma
-        name: testCase.name,
-        input: testCase.input,
-        output: testCase.output,
-      }];
+    if (!this.currentSnippetId) throw new Error('snippetId no seteado');
 
-      const response = await httpClient.post<any>(
-        '/test/create',
-        createDTO
-      );
-      return response;
-    } catch (error) {
-      console.error('Error creating test case:', error);
-      throw error;
-    }
+    const TestDTO = {
+      snippetId: this.currentSnippetId,
+      name: testCase.name ?? 'Unnamed Test',
+      input: testCase.inputs ?? [],
+      output: testCase.expectedOutputs ?? [],
+    };
+
+    console.log("POST /test/create body:", TestDTO);
+
+    const response = await httpClient.post<BackendTestCase>('/test/create', TestDTO);
+    return adaptBackendTestCaseToUI(response);
   }
 
+  async updateTestCase(testCase: Partial<TestCase>): Promise<TestCase> {
+    if (!this.currentSnippetId) throw new Error('snippetId no seteado');
+    const updateDTO = {
+      testId: testCase.id,
+      snippetId: this.currentSnippetId,
+      name: testCase.name,
+      inputs: testCase.inputs,
+      outputs: testCase.expectedOutputs,
+    };
+    const response = await httpClient.put<BackendTestCase>('/test/update', updateDTO);
+    return adaptBackendTestCaseToUI(response);
+  }
 
   async removeTestCase(id: string): Promise<string> {
-    try {
-      return id;
-    } catch (error) {
-      console.error('Error removing test case:', error);
-      throw error;
-    }
+    await httpClient.delete<void>(`/test/${id}`);
+    return id;
   }
 
   async testSnippet(testCase: Partial<TestCase>): Promise<TestCaseResult> {
-    try {
-      console.warn('Test snippet needs snippetId as path param', testCase);
-      return 'fail';
-    } catch (error) {
-      console.error('Error testing snippet:', error);
-      return 'fail';
-    }
+    if (!this.currentSnippetId) throw new Error('snippetId no seteado');
+    const body = {
+      testCaseId: testCase.id,
+      snippetId: this.currentSnippetId,
+    };
+    await httpClient.post<void>(`/test/run/${this.currentSnippetId}`, body);
+    return 'success'; // Aquí podés mapear a un tipo TestCaseResult más detallado si querés
   }
 
 
