@@ -113,8 +113,8 @@ export function adaptBackendTestCaseToUI(backendTestCase: BackendTestCase): Test
   return {
     id: backendTestCase.id,
     name: backendTestCase.name,
-    inputs: backendTestCase.input,
-    expectedOutputs: backendTestCase.output,
+    inputs: backendTestCase.input ?? [],
+    expectedOutputs: backendTestCase.output ?? [],
   };
 }
 
