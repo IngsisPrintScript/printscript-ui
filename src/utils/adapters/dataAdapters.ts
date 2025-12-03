@@ -110,7 +110,7 @@ export function adaptBackendRuleToUI(backendRule: BackendRule): Rule {
 
 
 export function adaptBackendTestCaseToUI(backendTestCase: BackendTestCase): TestCase {
-  return {
+  return <TestCase>{
     id: backendTestCase.id,
     name: backendTestCase.name,
     inputs: backendTestCase.input,

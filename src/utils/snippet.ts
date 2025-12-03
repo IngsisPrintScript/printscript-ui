@@ -18,6 +18,9 @@ export type CreateSnippet = {
 export type CreateSnippetWithLang = CreateSnippet & { language: string }
 
 export type UpdateSnippet = {
+  name: string
+  version: string
+  language: string
   content: string
 }
 
