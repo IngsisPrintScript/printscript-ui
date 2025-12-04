@@ -6,6 +6,11 @@ on:
       - dev
       - main
       - group-2-main
+
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   call-ui-cd:
     uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
