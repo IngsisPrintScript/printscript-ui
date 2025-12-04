@@ -2,7 +2,10 @@ name: UI CI
 
 on:
   push:
-    branches: [ "group-2-main" ]
+    branches:
+      - dev
+      - main
+      - group-2-main
 jobs:
   call-ui-cd:
     uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
