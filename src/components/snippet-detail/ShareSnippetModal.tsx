@@ -37,7 +37,7 @@ export const ShareSnippetModal = (props: ShareSnippetModalProps) => {
               renderInput={(params) => <TextField {...params} label="Type the user's name"/>}
               options={data?.users ?? []}
               isOptionEqualToValue={(option, value) =>
-                  option.id === value.id
+                  option.userId === value.userId
               }
               getOptionLabel={(option) => option.name}
               loading={isLoading}
@@ -47,7 +47,7 @@ export const ShareSnippetModal = (props: ShareSnippetModalProps) => {
           />
           <Box mt={4} display={"flex"} width={"100%"} justifyContent={"flex-end"}>
             <Button onClick={onClose} variant={"outlined"}>Cancel</Button>
-            <Button disabled={!selectedUser || loading} onClick={() => selectedUser && onShare(selectedUser?.id)} sx={{marginLeft: 2}} variant={"contained"}>Share</Button>
+            <Button disabled={!selectedUser || loading} onClick={() => selectedUser && onShare(selectedUser?.userId)} sx={{marginLeft: 2}} variant={"contained"}>Share</Button>
           </Box>
         </Box>
       </ModalWrapper>

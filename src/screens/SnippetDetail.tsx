@@ -64,11 +64,16 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
   const {mutate: updateSnippet, isLoading: isUpdateSnippetLoading} = useUpdateSnippetById({onSuccess: () => queryClient.invalidateQueries(['snippet', id])})
 
   // Set current snippet ID for format and test operations that need it
+  type SnippetOperationsWithSetter = {
+    setCurrentSnippetId: (id: string) => void;
+  };
+
   useEffect(() => {
     if (id && 'setCurrentSnippetId' in snippetOperations) {
-      (snippetOperations as any).setCurrentSnippetId(id);
-    }
-  }, [id, snippetOperations]);
+        (snippetOperations as SnippetOperationsWithSetter)
+            .setCurrentSnippetId(id);
+        }
+    }, [id, snippetOperations]);
 
   useEffect(() => {
     if (snippet) {
@@ -122,7 +127,7 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
                 </IconButton>
               </Tooltip>
               <Tooltip title={"Save changes"}>
-                <IconButton color={"primary"} onClick={() => updateSnippet({id: id, updateSnippet: {content: code}})} disabled={isUpdateSnippetLoading || snippet?.content === code} >
+                <IconButton color={"primary"} onClick={() => updateSnippet({id: id, updateSnippet: {name: "To change",version: "To change", language: "To change",content: code}})} disabled={isUpdateSnippetLoading || snippet?.content === code} >
                   <Save />
                 </IconButton>
               </Tooltip>
@@ -157,7 +162,7 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
         <ShareSnippetModal loading={loadingShare || isLoading} open={shareModalOppened}
                            onClose={() => setShareModalOppened(false)}
                            onShare={handleShareSnippet}/>
-        <TestSnippetModal open={testModalOpened} onClose={() => setTestModalOpened(false)}/>
+        <TestSnippetModal open={testModalOpened} onClose={() => setTestModalOpened(false)} snippetId={""}/>
         <DeleteConfirmationModal open={deleteConfirmationModalOpen} onClose={() => setDeleteConfirmationModalOpen(false)} id={snippet?.id ?? ""} setCloseDetails={handleCloseModal} />
       </Box>
   );
