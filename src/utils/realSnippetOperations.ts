@@ -41,7 +41,7 @@ export class RealSnippetOperations implements SnippetOperations {
 
   async listSnippetDescriptors(page: number, pageSize: number, snippetName?: string): Promise<PaginatedSnippets> {
     const baseURL = import.meta.env.VITE_API_BASE_URL;
-    const url = `${baseURL}/snippet/filter`;
+    const url = `${baseURL}/filter`;
     const token = await this.getAuthToken();
     const body = snippetName ? JSON.stringify({ name: snippetName }) : undefined;
 
@@ -75,13 +75,13 @@ export class RealSnippetOperations implements SnippetOperations {
       version: '1.0',
       content: createSnippet.content,
     };
-    const response = await httpClient.post<any>('/snippets/create/text', requestBody);
+    const response = await httpClient.post<any>('/create/text', requestBody);
     return this.adaptBackendSnippet(response);
   }
 
   async getSnippetById(id: string): Promise<Snippet | undefined> {
     try {
-      const { data } = await httpClient.get<any>(`/snippets/${id}`);
+      const { data } = await httpClient.get<any>(`/${id}`);
       return this.adaptBackendSnippet(data);
     } catch (error: any) {
       if (error.response?.status === 403 || error.response?.status === 404) return undefined;
@@ -100,14 +100,14 @@ export class RealSnippetOperations implements SnippetOperations {
       version: updateSnippet.version,
       content: updateSnippet.content,
     };
-    const response = await httpClient.put<any>(`/snippets/${targetId}/update/text`, requestBody);
+    const response = await httpClient.put<any>(`/${targetId}/update/text`, requestBody);
     return this.adaptBackendSnippet(response);
   }
 
   async deleteSnippet(id: string, snippetId?: string): Promise<string> {
     const targetId = snippetId ?? this.currentSnippetId ?? id;
     if (!targetId) throw new Error('snippetId no seteado');
-    await httpClient.delete<void>(`/snippets/${targetId}`);
+    await httpClient.delete<void>(`/${targetId}`);
     return id;
   }
 
@@ -115,7 +115,7 @@ export class RealSnippetOperations implements SnippetOperations {
     const targetId = snippetId ?? this.currentSnippetId;
     if (!targetId) throw new Error('snippetId no seteado');
     if (!userId) throw new Error('userId no seteado');
-    const response = await httpClient.post<Snippet>(`/snippets/${targetId}/share`, { userId });
+    const response = await httpClient.post<Snippet>(`/${targetId}/share`, { userId });
     return response;
   }
 
