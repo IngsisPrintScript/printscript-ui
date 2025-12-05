@@ -109,7 +109,6 @@ export class HttpClient {
 }
 
 // Instancia singleton del cliente HTTP
-export const httpClient = new HttpClient(process.env.VITE_API_BASE_URL || 'http://localhost:8081');
-export const httpUserClient = new HttpClient(process.env.VITE_API_USER_BASE_URL || 'http://localhost:8088');
-
+export const httpClient = new HttpClient(import.meta.env.VITE_API_BASE_URL);
+export const httpUserClient = new HttpClient(import.meta.env.VITE_API_USER_BASE_URL);
 
