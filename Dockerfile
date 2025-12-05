@@ -29,10 +29,12 @@ FROM nginx:1.27-alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Remover config default
+RUN rm /etc/nginx/conf.d/default.conf
+
 # Copy custom Nginx configuration
 COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
 
-# Remover config default
 # Exponer puerto 80 (dentro del contenedor)
 EXPOSE 80
 
