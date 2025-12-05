@@ -8,11 +8,11 @@ describe('Add snippet tests', () => {
     //     AUTH0_USERNAME,
     //     AUTH0_PASSWORD
     // )
-    cy.intercept('GET', BACKEND_URL+"/snippets/*", {
+    cy.intercept('GET', BACKEND_URL+"/snippet/*", {
       statusCode: 201,
       body: fakeStore.getSnippetById("1"),
     }).as("getSnippetById")
-    cy.intercept('GET', BACKEND_URL+"/snippets").as("getSnippets")
+    cy.intercept('GET', BACKEND_URL+"/snippet").as("getSnippets")
 
     cy.visit("/")
 

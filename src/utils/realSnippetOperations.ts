@@ -41,7 +41,7 @@ export class RealSnippetOperations implements SnippetOperations {
 
   async listSnippetDescriptors(page: number, pageSize: number, snippetName?: string): Promise<PaginatedSnippets> {
     const baseURL = import.meta.env.VITE_API_BASE_URL;
-    const url = `${baseURL}/snippets/filter`;
+    const url = `${baseURL}/snippet/filter`;
     const token = await this.getAuthToken();
     const body = snippetName ? JSON.stringify({ name: snippetName }) : undefined;
 
