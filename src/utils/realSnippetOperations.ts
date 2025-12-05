@@ -40,7 +40,7 @@ export class RealSnippetOperations implements SnippetOperations {
   // ------------------- SNIPPETS -------------------
 
   async listSnippetDescriptors(page: number, pageSize: number, snippetName?: string): Promise<PaginatedSnippets> {
-    const baseURL = process.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const baseURL = process.env.VITE_API_BASE_URL;
     const url = `${baseURL}/snippets/filter`;
     const token = await this.getAuthToken();
     const body = snippetName ? JSON.stringify({ name: snippetName }) : undefined;

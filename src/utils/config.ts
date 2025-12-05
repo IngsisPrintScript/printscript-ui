@@ -1,13 +1,13 @@
 export const API_CONFIG = {
   // Base URL del backend - cambiar cuando esté corriendo
-  baseURL: process.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: process.env.VITE_API_BASE_URL,
   
   // Timeouts
   timeout: 30000,
   
   // Endpoints
   endpoints: {
-    snippets: '/snippets',
+    snippets: '/snippet',
     users: '/users',
     format: '/format',
     linting: '/linting',
