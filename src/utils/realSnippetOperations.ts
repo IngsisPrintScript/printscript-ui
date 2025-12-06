@@ -75,7 +75,9 @@ export class RealSnippetOperations implements SnippetOperations {
       version: '1.0',
       content: createSnippet.content,
     };
+    console.log(requestBody)
     const response = await httpClient.post<any>('/create/text', requestBody);
+    console.log("b")
     return this.adaptBackendSnippet(response);
   }
 
