@@ -7,4 +7,4 @@ on:
 
 jobs:
   ci:
-    uses: IngsisPrintScript/workflows-and-actions/.github/workflows/ci.yml@main
+    uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
