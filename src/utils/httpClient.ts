@@ -80,6 +80,7 @@ export class HttpClient {
   }
 
   async post<T>(endpoint: string, body?: any): Promise<T> {
+      console.log(endpoint, body);
     return this.request<T>(endpoint, {
       method: 'POST',
       body: JSON.stringify(body),
