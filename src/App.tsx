@@ -22,13 +22,18 @@ export const queryClient = new QueryClient()
 const ProtectedApp = withAuthenticationRequired(() => {
     const { getAccessTokenSilently } = useAuth0();
 
-    registerTokenGetter(() =>
-        getAccessTokenSilently({
-            authorizationParams: {
-                audience: "https://snippet-search-ingsis"
-            }
-        })
-    );
+    registerTokenGetter(async () => {
+        try {
+            return await getAccessTokenSilently({
+                authorizationParams: {
+                    audience: "https://snippet-search-ingsis"
+                }
+            });
+        } catch (e) {
+            console.error("Error obteniendo token:", e);
+            return null;
+        }
+    });
 
     return (
         <QueryClientProvider client={queryClient}>
