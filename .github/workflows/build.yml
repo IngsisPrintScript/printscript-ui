@@ -1,9 +1,9 @@
 name: Build & Push Snippet Image
 on:
   push:
-    branches: [ "dev", "main" ]
+    branches: [ "dev", "main", "group-2-main" ]
   pull_request:
-    branches: [ "dev", "main" ]
+    branches: [ "dev", "main", "group-2-main" ]
 
 permissions:
   contents: write
