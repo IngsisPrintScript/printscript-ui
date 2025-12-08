@@ -41,7 +41,7 @@ export class RealSnippetOperations implements SnippetOperations {
 
   async listSnippetDescriptors(page: number, pageSize: number, snippetName?: string): Promise<PaginatedSnippets> {
     const baseURL = import.meta.env.VITE_API_BASE_URL;
-    const url = `${baseURL}/filter`;
+    const url = `${baseURL}/snippet/filter`;
     const token = await this.getAuthToken();
     const body = snippetName ? JSON.stringify({ name: snippetName }) : undefined;
 
@@ -54,7 +54,17 @@ export class RealSnippetOperations implements SnippetOperations {
       body,
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage = errorData || errorMessage;
+        console.error('Error response from /snippet/filter:', errorMessage);
+      } catch (e) {
+        console.error('Could not read error response');
+      }
+      throw new Error(errorMessage);
+    }
 
     const data = await response.json();
     return {
@@ -76,17 +86,43 @@ export class RealSnippetOperations implements SnippetOperations {
       content: createSnippet.content,
     };
     console.log(requestBody)
-    const response = await httpClient.post<any>('/create/text', requestBody);
-    console.log("b")
-    return this.adaptBackendSnippet(response);
+    const response = await httpClient.post<any>('/snippet/create/text', requestBody);
+    console.log("b", response)
+    // El backend devuelve un string (mensaje de éxito o error), no un objeto JSON
+    // Si la respuesta es un string que contiene "Error", lanzar excepción
+    if (typeof response === 'string') {
+      if (response.includes('Error') || response.includes('Invalid')) {
+        throw new Error(response);
+      }
+      // Si es un mensaje de éxito (o string vacío), el snippet se creó correctamente
+      // Retornamos un objeto temporal que será reemplazado cuando se refresque la lista
+    } else if (response && typeof response === 'object' && Object.keys(response).length === 0) {
+      // Si es un objeto vacío, también asumimos que se creó correctamente
+    }
+    
+    // Si llegamos aquí, el snippet se creó correctamente
+    // Retornamos un objeto temporal que será reemplazado cuando se refresque la lista
+    return {
+      id: 'temp-' + Date.now(),
+      name: createSnippet.name,
+      language: createSnippet.language,
+      content: createSnippet.content,
+      author: 'Unknown',
+      conformance: 'pending' as const,
+    };
   }
 
   async getSnippetById(id: string): Promise<Snippet | undefined> {
     try {
-      const { data } = await httpClient.get<any>(`/${id}`);
+      const data = await httpClient.get<any>(`/snippet/${id}`);
+      // El backend ahora devuelve un DataDTO con {snippet, owner, content}
+      if (data.snippet) {
+        return this.adaptBackendSnippet(data.snippet, data.owner, data.content);
+      }
+      // Si no tiene la estructura esperada, intentar adaptar directamente
       return this.adaptBackendSnippet(data);
     } catch (error: any) {
-      if (error.response?.status === 403 || error.response?.status === 404) return undefined;
+      if (error.status === 403 || error.status === 404) return undefined;
       throw error;
     }
   }
@@ -109,7 +145,7 @@ export class RealSnippetOperations implements SnippetOperations {
   async deleteSnippet(id: string, snippetId?: string): Promise<string> {
     const targetId = snippetId ?? this.currentSnippetId ?? id;
     if (!targetId) throw new Error('snippetId no seteado');
-    await httpClient.delete<void>(`/${targetId}`);
+    await httpClient.delete<void>(`/snippet/${targetId}`);
     return id;
   }
 
@@ -117,7 +153,11 @@ export class RealSnippetOperations implements SnippetOperations {
     const targetId = snippetId ?? this.currentSnippetId;
     if (!targetId) throw new Error('snippetId no seteado');
     if (!userId) throw new Error('userId no seteado');
-    const response = await httpClient.post<Snippet>(`/${targetId}/share`, { userId });
+    // El backend espera PUT en /snippet/{snippetId}/share con ShareDTO { userId, action: "READ" }
+    const response = await httpClient.put<Snippet>(`/snippet/${targetId}/share`, { 
+      userId,
+      action: 'READ' // AuthorizationActions.READ
+    });
     return response;
   }
 
@@ -142,11 +182,45 @@ export class RealSnippetOperations implements SnippetOperations {
   // ------------------- USERS -------------------
 
   async getUserFriends(name?: string, page?: number, pageSize?: number): Promise<PaginatedUsers> {
-    const params: any = {};
-    if (name) params.name = name;
-    if (page !== undefined) params.page = page;
-    if (pageSize !== undefined) params.page_size = pageSize;
-    return await httpUserClient.get<PaginatedUsers>('/users', params);
+    if (!name || name.trim().length === 0) {
+      // Si no hay nombre, retornar lista vacía
+      return { users: [], page: page || 0, page_size: pageSize || 10, count: 0 };
+    }
+    
+    try {
+      console.log('getUserFriends - Searching for users with name:', name);
+      const params: any = { name };
+      if (page !== undefined) params.page = page;
+      if (pageSize !== undefined) params.page_size = pageSize;
+      console.log('getUserFriends - Request params:', params);
+      const response = await httpUserClient.get<any>('/api/users', params);
+      console.log('getUserFriends - Response:', response);
+      
+      // El backend devuelve una lista de UserResult, necesitamos adaptarla
+      if (Array.isArray(response)) {
+        const users = {
+          users: response.map((user: any) => ({
+            userId: user.userId || user.user_id,
+            name: user.name || 'Unknown'
+          })),
+          page: page || 0,
+          page_size: pageSize || 10,
+          count: response.length
+        };
+        console.log('getUserFriends - Mapped users:', users);
+        return users;
+      }
+      
+      // Si ya tiene la estructura PaginatedUsers
+      return response;
+    } catch (error: any) {
+      console.error('Error getting users:', error);
+      console.error('Error status:', error.status);
+      console.error('Error message:', error.message);
+      console.error('Error data:', error.data);
+      // Retornar lista vacía en caso de error
+      return { users: [], page: page || 0, page_size: pageSize || 10, count: 0 };
+    }
   }
 
   // ------------------- TEST CASES -------------------

@@ -43,20 +43,31 @@ export class HttpClient {
         message: `HTTP Error: ${response.status} ${response.statusText}`,
       };
 
-      // Clonar el response antes de leerlo para no consumir el stream
-      const clonedResponse = response.clone();
+      // Leer el body del error una sola vez
       try {
-        error.data = await clonedResponse.json();
-      } catch {
-        error.data = await clonedResponse.text();
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          error.data = await response.json();
+        } else {
+          error.data = await response.text();
+        }
+      } catch (e) {
+        // Si no se puede leer el body, dejamos error.data como undefined
+        error.data = undefined;
       }
 
       throw error;
     }
 
-    // Manejar respuestas vacías
+    // Manejar respuestas vacías o de texto plano
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
+      // Si es texto plano, leerlo como texto
+      if (contentType && contentType.includes('text/plain')) {
+        const text = await response.text();
+        return (text || {}) as T;
+      }
+      // Si no hay contenido o es otro tipo, devolver objeto vacío
       return {} as T;
     }
 
@@ -80,11 +91,18 @@ export class HttpClient {
   }
 
   async post<T>(endpoint: string, body?: any): Promise<T> {
-      console.log(endpoint, body);
-    return this.request<T>(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
+    console.log('POST Request:', endpoint, body);
+    try {
+      const result = await this.request<T>(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      console.log('POST Response:', result);
+      return result;
+    } catch (error: any) {
+      console.error('POST Error:', error);
+      throw error;
+    }
   }
 
   async put<T>(endpoint: string, body?: any): Promise<T> {

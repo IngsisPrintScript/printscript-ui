@@ -74,7 +74,11 @@ export const useGetUsers = (name: string = "", page: number = 0, pageSize: numbe
   const snippetOperations = useSnippetsOperations()
   return useQuery<PaginatedUsers, Error>(
       ['users', name, page, pageSize],
-      () => snippetOperations.getUserFriends(name, page, pageSize)
+      () => snippetOperations.getUserFriends(name, page, pageSize),
+      {
+        enabled: name.length > 0, // Solo ejecutar cuando hay un nombre
+        retry: false, // No reintentar en caso de error
+      }
   );
 };
 
