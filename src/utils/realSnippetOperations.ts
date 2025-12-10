@@ -1,10 +1,11 @@
 import { SnippetOperations } from './snippetOperations';
 import {httpClient, httpUserClient} from './httpClient';
 import {
-  CreateSnippet,
-  PaginatedSnippets,
-  Snippet,
-  UpdateSnippet,
+    CompilationEnum,
+    CreateSnippet,
+    PaginatedSnippets,
+    Snippet,
+    UpdateSnippet,
 } from './snippet';
 import { PaginatedUsers } from './users';
 import { TestCase } from '../types/TestCase';
@@ -13,6 +14,7 @@ import { FileType } from '../types/FileType';
 import { Rule } from '../types/Rule';
 import { getToken } from '../auth/tokenProvider';
 import { adaptBackendTestCaseToUI, BackendTestCase } from './adapters/dataAdapters.ts';
+import {BackendPaginatedSnippets, BackendSnippetWithLintData} from "./backend.ts";
 
 export class RealSnippetOperations implements SnippetOperations {
   private currentSnippetId: string | null = null;
@@ -39,33 +41,46 @@ export class RealSnippetOperations implements SnippetOperations {
 
   // ------------------- SNIPPETS -------------------
 
-  async listSnippetDescriptors(page: number, pageSize: number, snippetName?: string): Promise<PaginatedSnippets> {
-    const baseURL = import.meta.env.VITE_API_BASE_URL;
-    const url = `${baseURL}/filter`;
-    const token = await this.getAuthToken();
-    const body = snippetName ? JSON.stringify({ name: snippetName }) : undefined;
+    async listSnippetDescriptors(
+        page: number,
+        pageSize: number,
+        snippetName?: string
+    ): Promise<PaginatedSnippets> {
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body,
-    });
+        const baseURL = import.meta.env.VITE_API_BASE_URL;
+        const token = await this.getAuthToken();
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const filter = snippetName
+            ? { name: snippetName }
+            : {};
 
-    const data = await response.json();
-    return {
-      page,
-      page_size: pageSize,
-      count: data.length,
-      snippets: data.map((item: any) =>
-          this.adaptBackendSnippet(item.snippet, item.owner, item.content)
-      ),
-    };
-  }
+        const response = await fetch(
+            `${baseURL}/filter?page=${page}&page_size=${pageSize}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(filter),
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data: BackendPaginatedSnippets = await response.json();
+
+        return {
+            page: data.page,
+            page_size: data.page_size,
+            count: data.count,
+            snippets: data.snippets.map(backend =>
+                this.adaptBackendSnippet(backend)
+            )
+        };
+    }
 
   async createSnippet(createSnippet: CreateSnippet): Promise<Snippet> {
     const requestBody = {
@@ -121,25 +136,27 @@ export class RealSnippetOperations implements SnippetOperations {
     return response;
   }
 
-  private adaptBackendSnippet(backendSnippet: any, owner?: string, content?: string): Snippet {
-    return {
-      id: backendSnippet.id,
-      name: backendSnippet.name,
-      content: content || '',
-      language: backendSnippet.language,
-      extension: backendSnippet.language === 'printscript' ? 'pisp' : 'txt',
-      compliance: this.mapComplianceStatus(backendSnippet.lintStatus, backendSnippet.formatStatus),
-      author: owner || 'Unknown',
-    };
-  }
+    private adaptBackendSnippet(backend: BackendSnippetWithLintData): Snippet {
+        const backendStatus = backend.valid;
 
-  private mapComplianceStatus(lintStatus?: string, formatStatus?: string): 'pending' | 'failed' | 'not-compliant' | 'compliant' {
-    if (lintStatus === 'VALID' && formatStatus === 'VALID') return 'compliant';
-    if (lintStatus === 'INVALID' || formatStatus === 'INVALID') return 'not-compliant';
-    return 'pending';
-  }
+        const compliance: CompilationEnum =
+            backendStatus === 'PASSED' ? 'passed' :
+                backendStatus === 'FAILED' ? 'failed' :
+                    backendStatus === 'PENDING' ? 'pending' :
+                        'to-do';
 
-  // ------------------- USERS -------------------
+        return {
+            id: backend.snippet.id,
+            name: backend.snippet.name,
+            content: backend.content || '',
+            language: backend.snippet.language,
+            extension: backend.snippet.language === 'printscript' ? 'pisp' : 'txt',
+            compliance,
+            author: backend.user,
+        };
+    }
+
+    // ------------------- USERS -------------------
 
   async getUserFriends(name?: string, page?: number, pageSize?: number): Promise<PaginatedUsers> {
     const params: any = {};
@@ -250,7 +267,7 @@ export class RealSnippetOperations implements SnippetOperations {
 
   async getFileTypes(): Promise<FileType[]> {
     return [
-      { language: 'printscript', extension: 'prs' },
+      { language: 'printscript', extension: 'pisp' },
       { language: 'javascript', extension: 'js' },
       { language: 'typescript', extension: 'ts' },
     ];
