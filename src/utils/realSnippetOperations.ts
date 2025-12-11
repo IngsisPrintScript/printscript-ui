@@ -1,19 +1,13 @@
-import { SnippetOperations } from './snippetOperations';
+import {SnippetOperations} from './snippetOperations';
 import {httpClient, httpUserClient} from './httpClient';
-import {
-    CompilationEnum,
-    CreateSnippet,
-    PaginatedSnippets,
-    Snippet,
-    UpdateSnippet,
-} from './snippet';
-import { PaginatedUsers } from './users';
-import { TestCase } from '../types/TestCase';
-import { TestCaseResult } from './queries';
-import { FileType } from '../types/FileType';
-import { Rule } from '../types/Rule';
-import { getToken } from '../auth/tokenProvider';
-import { adaptBackendTestCaseToUI, BackendTestCase } from './adapters/dataAdapters.ts';
+import {CompilationEnum, CreateSnippet, PaginatedSnippets, Snippet, UpdateSnippet,} from './snippet';
+import {PaginatedUsers} from './users';
+import {TestCase} from '../types/TestCase';
+import {TestCaseResult} from './queries';
+import {FileType} from '../types/FileType';
+import {Rule} from '../types/Rule';
+import {getToken} from '../auth/tokenProvider';
+import {adaptBackendTestCaseToUI, BackendTestCase} from './adapters/dataAdapters.ts';
 import {BackendPaginatedSnippets, BackendSnippetWithLintData} from "./backend.ts";
 
 export class RealSnippetOperations implements SnippetOperations {
@@ -90,9 +84,7 @@ export class RealSnippetOperations implements SnippetOperations {
       version: '1.0',
       content: createSnippet.content,
     };
-    console.log(requestBody)
     const response = await httpClient.post<any>('/create/text', requestBody);
-    console.log("b")
     return this.adaptBackendSnippet(response);
   }
 
@@ -132,18 +124,17 @@ export class RealSnippetOperations implements SnippetOperations {
     const targetId = snippetId ?? this.currentSnippetId;
     if (!targetId) throw new Error('snippetId no seteado');
     if (!userId) throw new Error('userId no seteado');
-    const response = await httpClient.post<Snippet>(`/${targetId}/share`, { userId });
-    return response;
+      return await httpClient.post<Snippet>(`/${targetId}/share`, {userId});
   }
 
     private adaptBackendSnippet(backend: BackendSnippetWithLintData): Snippet {
         const backendStatus = backend.valid;
 
         const compliance: CompilationEnum =
-            backendStatus === 'PASSED' ? 'passed' :
-                backendStatus === 'FAILED' ? 'failed' :
-                    backendStatus === 'PENDING' ? 'pending' :
-                        'to-do';
+            backendStatus === 'PASSED' ? 'PASSED' :
+                backendStatus === 'FAILED' ? 'FAILED' :
+                    backendStatus === 'PENDING' ? 'PENDING' :
+                        'TODO';
 
         return {
             id: backend.snippet.id,

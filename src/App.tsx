@@ -1,24 +1,13 @@
 import './App.css';
 import {RouterProvider} from "react-router";
-import {createBrowserRouter} from "react-router-dom";
+import {createBrowserRouter, Outlet} from "react-router-dom";
 import HomeScreen from "./screens/Home.tsx";
 import {QueryClient, QueryClientProvider} from "react-query";
 import RulesScreen from "./screens/Rules.tsx";
 import { registerTokenGetter } from './auth/tokenProvider.ts';
 import {Auth0Provider, useAuth0, withAuthenticationRequired} from '@auth0/auth0-react';
+import CallbackScreen from "./screens/Callback.tsx";
 
-const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <HomeScreen/>
-    },
-    {
-        path: '/rules',
-        element: <RulesScreen/>
-    }
-]);
-
-export const queryClient = new QueryClient()
 const ProtectedApp = withAuthenticationRequired(() => {
     const { getAccessTokenSilently } = useAuth0();
 
@@ -36,11 +25,25 @@ const ProtectedApp = withAuthenticationRequired(() => {
     });
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
-        </QueryClientProvider>
+        <Outlet />
     );
 });
+
+const router = createBrowserRouter([
+    {
+        path: "/callback",
+        element: <CallbackScreen />
+    },
+    {
+        element: <ProtectedApp />,
+        children: [
+            { path: "/", element: <HomeScreen/> },
+            { path: "/rules", element: <RulesScreen/> }
+        ]
+    }
+]);
+
+export const queryClient = new QueryClient()
 
 const App = () => {
     return (
@@ -48,14 +51,16 @@ const App = () => {
             domain={import.meta.env.VITE_AUTH0_DOMAIN}
             clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
             authorizationParams={{
-                redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL,
+                redirect_uri: window.location.origin + "/callback",
                 audience: "https://snippet-search-ingsis",
                 scope: "openid profile email offline_access",
             }}
             cacheLocation="localstorage"
             useRefreshTokens={true}
         >
-            <ProtectedApp />
+            <QueryClientProvider client={queryClient}>
+                <RouterProvider router={router} />
+            </QueryClientProvider>
         </Auth0Provider>
     );
 };

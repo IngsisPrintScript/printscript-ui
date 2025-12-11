@@ -2,10 +2,10 @@ import {Pagination} from "./pagination.ts";
 import {FileType} from "../types/FileType.ts";
 
 export type CompilationEnum =
-    'pending'   |
-    'passed'    |
-    'failed'    |
-    'to-do'
+    'PENDING'   |
+    'PASSED'    |
+    'FAILED'    |
+    'TODO'
 
 export type SnippetProperty = 'OWNER' | 'SHARED' | 'BOTH'
 

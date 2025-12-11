@@ -74,7 +74,7 @@ export class HttpClient {
       });
     }
 
-    return this.request<T>(url.pathname + url.search, {
+    return this.request<T>(`${endpoint}${url.search}`, {
       method: 'GET',
     });
   }
