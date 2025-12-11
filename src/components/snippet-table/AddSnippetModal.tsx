@@ -37,15 +37,22 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
     const {data: fileTypes} = useGetFileTypes();
 
     const handleCreateSnippet = async () => {
-        const newSnippet: CreateSnippet = {
-            name: snippetName,
-            content: code,
-            language: language,
-            extension: fileTypes?.find((f) => f.language === language)?.extension ?? "prs"
+        try {
+            const newSnippet: CreateSnippet = {
+                name: snippetName,
+                content: code,
+                language: language,
+                extension: fileTypes?.find(f => f.language === language)?.extension ?? "prs"
+            };
+
+            await createSnippet(newSnippet);
+            onClose();
+
+        } catch (error: any) {
+            console.error("Error creating snippet:", error);
+            alert(`Error al crear el snippet: ${error?.data?.message || error?.message || 'Error desconocido'}`);
         }
-        await createSnippet(newSnippet);
-        onClose();
-    }
+    };
 
     useEffect(() => {
         if (defaultSnippet) {
