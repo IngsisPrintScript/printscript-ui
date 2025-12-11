@@ -15,7 +15,7 @@ import {queryClient} from "../App.tsx";
 let snippetOperationsInstance: SnippetOperations | null = null;
 
 export const useSnippetsOperations = () => {
-  const { getAccessTokenSilently } = useAuth0();
+  useAuth0();
 
   // useEffect(() => {
   //     getAccessTokenSilently()
@@ -27,7 +27,7 @@ export const useSnippetsOperations = () => {
 
   if (!snippetOperationsInstance) {
     // snippetOperationsInstance = new FakeSnippetOperations(/* getAccessTokenSilently */);
-    snippetOperationsInstance = new RealSnippetOperations(getAccessTokenSilently);
+    snippetOperationsInstance = new RealSnippetOperations();
   }
 
   return snippetOperationsInstance;
@@ -89,7 +89,7 @@ export const useShareSnippet = () => {
 
 export const useGetTestCases = (snippetId: string) => {
   const snippetOperations = useSnippetsOperations()
-  return useQuery<TestCase[] | undefined, Error>(
+  return useQuery<TestCase[], Error>(
       ['testCases', snippetId],
       () => snippetOperations.getTestCases(snippetId),
       { enabled: !!snippetId }
@@ -99,32 +99,33 @@ export const useGetTestCases = (snippetId: string) => {
 export const usePostTestCase = (snippetId: string) => {
   const snippetOperations = useSnippetsOperations()
   return useMutation<TestCase, Error, Partial<TestCase>>(
-      (tc) => snippetOperations.postTestCase(tc,snippetId),
+      (tc) => snippetOperations.postTestCase(tc, snippetId),
       {
         onSuccess: () => {
-          // Actualiza la cache de testCases para este snippet
           queryClient.invalidateQueries(['testCases', snippetId])
         }
       }
   );
 };
 
-export const useRemoveTestCase = ({onSuccess}: {onSuccess: () => void}) => {
+export const useRemoveTestCase = (snippetId: string) => {
   const snippetOperations = useSnippetsOperations()
   return useMutation<string, Error, string>(
-      ['removeTestCase'],
       (id) => snippetOperations.removeTestCase(id),
-      {onSuccess}
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries(['testCases', snippetId])
+        }
+      }
   );
 };
-
 export type TestCaseResult = "success" | "fail"
 
 export const useTestSnippet = () => {
   const snippetOperations = useSnippetsOperations()
   return useMutation<TestCaseResult, Error, Partial<TestCase>>(
       (tc) => snippetOperations.testSnippet(tc)
-  )
+  );
 };
 
 // ------------------- RULES -------------------
@@ -147,6 +148,17 @@ export const useGetLintingRules = () => {
 export const useModifyLintingRules = ({onSuccess}: {onSuccess: () => void}) => {
   const snippetOperations = useSnippetsOperations()
   return useMutation<Rule[], Error, Rule[]>(rule => snippetOperations.modifyLintingRule(rule), {onSuccess});
+};
+
+export const useInitializeRules = ({ onSuccess }: { onSuccess?: () => void } = {}) => {
+  const snippetOperations = useSnippetsOperations();
+
+  return useMutation<void, Error, void>(
+      () => snippetOperations.initializeRules(),
+      {
+        onSuccess
+      }
+  );
 };
 
 // ------------------- MISC -------------------

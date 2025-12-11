@@ -39,4 +39,7 @@ export interface SnippetOperations {
   modifyFormatRule(newRules: Rule[]): Promise<Rule[]>
 
   modifyLintingRule(newRules: Rule[]): Promise<Rule[]>
+
+  //Rule to initialize rules on first load
+  initializeRules(): Promise<void>
 }

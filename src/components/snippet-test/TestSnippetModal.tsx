@@ -1,63 +1,75 @@
-import {Box,  Divider, IconButton, Tab, Tabs, Typography} from "@mui/material";
-import {ModalWrapper} from "../common/ModalWrapper.tsx";
-import {SyntheticEvent, useState} from "react";
-import {AddRounded} from "@mui/icons-material";
-import {useGetTestCases, usePostTestCase, useRemoveTestCase} from "../../utils/queries.tsx";
-import {TabPanel} from "./TabPanel.tsx";
-import {queryClient} from "../../App.tsx";
+import { Box, Divider, Tab, Tabs, Typography } from "@mui/material";
+import { ModalWrapper } from "../common/ModalWrapper.tsx";
+import { SyntheticEvent, useState } from "react";
+import { AddRounded } from "@mui/icons-material";
+import { useGetTestCases, usePostTestCase, useRemoveTestCase } from "../../utils/queries.tsx";
+import { TabPanel } from "./TabPanel.tsx";
 
 type TestSnippetModalProps = {
-    open: boolean
-    onClose: () => void
-    snippetId: string
-}
+    open: boolean;
+    onClose: () => void;
+    snippetId: string;
+};
 
-export const TestSnippetModal = ({open, onClose, snippetId}: TestSnippetModalProps) => {
+export const TestSnippetModal = ({ open, onClose, snippetId }: TestSnippetModalProps) => {
     const [value, setValue] = useState(0);
 
-    const {data: testCases} = useGetTestCases(snippetId);
-    const {mutateAsync: postTestCase} = usePostTestCase(snippetId);
-    const {mutateAsync: removeTestCase} = useRemoveTestCase({
-        onSuccess: () => {
-            queryClient.invalidateQueries('testCases')
-            onClose()
-        }
-    });
+    const { data: testCases } = useGetTestCases(snippetId);
+    const { mutateAsync: postTestCase } = usePostTestCase(snippetId);
+    const { mutateAsync: deleteTestCase } = useRemoveTestCase(snippetId);
 
     const handleChange = (_: SyntheticEvent, newValue: number) => {
         setValue(newValue);
     };
 
+    const newTestIndex = testCases?.length ?? 0;
+
     return (
         <ModalWrapper open={open} onClose={onClose}>
-            <Typography variant={"h5"}>Test snippet</Typography>
-            <Divider/>
+            <Typography variant="h5">Test snippet</Typography>
+            <Divider />
+
             <Box mt={2} display="flex">
+                {/* TABS */}
                 <Tabs
                     orientation="vertical"
                     variant="scrollable"
                     value={value}
                     onChange={handleChange}
-                    aria-label="Vertical tabs example"
-                    sx={{borderRight: 1, borderColor: 'divider'}}
+                    sx={{ borderRight: 1, borderColor: "divider" }}
                 >
-                    {testCases?.map((testCase) => (
-                        <Tab label={testCase.name}/>
+                    {/* EXISTING TESTS */}
+                    {testCases?.map((testCase, index) => (
+                        <Tab key={testCase.testId} label={testCase.name} value={index} />
                     ))}
-                    <IconButton disableRipple onClick={() => setValue((testCases?.length ?? 0) + 1)}>
-                        <AddRounded />
-                    </IconButton>
+
+                    {/* ADD NEW TEST */}
+                    <Tab
+                        icon={<AddRounded />}
+                        value={newTestIndex}
+                        aria-label="Add test case"
+                    />
                 </Tabs>
+
+                {/* PANELS FOR EXISTING TESTS */}
                 {testCases?.map((testCase, index) => (
-                    <TabPanel index={index} value={value} test={testCase}
-                              setTestCase={(tc) => postTestCase(tc)}
-                              removeTestCase={(i) => removeTestCase(i)}
+                    <TabPanel
+                        key={testCase.testId}
+                        index={index}
+                        value={value}
+                        test={testCase}
+                        saveTest={(test) => postTestCase({ ...test, snippetId })}
+                        removeTest={() => deleteTestCase(testCase.testId)}
                     />
                 ))}
-                <TabPanel index={(testCases?.length ?? 0) + 1} value={value}
-                          setTestCase={(tc) => postTestCase(tc)}
+
+                {/* PANEL FOR NEW TEST */}
+                <TabPanel
+                    index={newTestIndex}
+                    value={value}
+                    saveTest={(test) => postTestCase({ ...test, snippetId })}
                 />
             </Box>
         </ModalWrapper>
-    )
-}
+    );
+};

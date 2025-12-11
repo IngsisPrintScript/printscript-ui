@@ -116,17 +116,17 @@ export class RealSnippetOperations implements SnippetOperations {
 
     private adaptBackendSnippet(backend: BackendSnippetWithLintData): Snippet {
         const status = backend.valid;
-
         const compliance: CompilationEnum =
-            status === "PASSED" ? "PASSED" :
-                status === "FAILED" ? "FAILED" :
+            status === "PASSED" ? "COMPILE" :
+                status === "FAILED" ? "NOT COMPILE" :
                     status === "PENDING" ? "PENDING" :
-                        "PENDING";
+                        "NOT CHECKED";
 
         return {
             id: backend.snippet.id,
             name: backend.snippet.name,
             content: backend.content ?? "",
+            version: backend.snippet.version ?? "1.0",
             language: backend.snippet.language,
             extension: backend.snippet.language === "printscript" ? "pisp" : "txt",
             compliance,
@@ -157,37 +157,19 @@ export class RealSnippetOperations implements SnippetOperations {
     // ------------------------------------------------------------
 
     async getTestCases(snippetId?: string): Promise<TestCase[]> {
-        const id = snippetId ?? this.currentSnippetId;
-        const data = await httpClient.get<BackendTestCase[]>(`/test?snippetId=${id}`);
+        const data = await httpClient.get<BackendTestCase[]>(`/test?snippetId=${snippetId || this.currentSnippetId}`);
         return data.map(adaptBackendTestCaseToUI);
     }
 
-    async postTestCase(testCase: Partial<TestCase>, snippetId?: string): Promise<TestCase> {
-        const id = snippetId ?? this.currentSnippetId;
-
+    async postTestCase(testCase: Partial<TestCase>, snippetId: string): Promise<TestCase> {
         const dto = {
-            snippetId: id,
-            name: testCase.name ?? "Unnamed Test",
-            input: testCase.inputs ?? [],
-            output: testCase.expectedOutputs ?? []
+            snippetId : snippetId || this.currentSnippetId,
+            name: testCase.name ?? "New Test",
+            inputs: testCase.inputs ?? [],
+            expectedOutputs: testCase.expectedOutputs ?? []
         };
 
         const r = await httpClient.post<BackendTestCase>(`/test/create`, dto);
-        return adaptBackendTestCaseToUI(r);
-    }
-
-    async updateTestCase(testCase: Partial<TestCase>, snippetId?: string): Promise<TestCase> {
-        const id = snippetId ?? this.currentSnippetId;
-
-        const dto = {
-            testId: testCase.id,
-            snippetId: id,
-            name: testCase.name,
-            inputs: testCase.inputs,
-            outputs: testCase.expectedOutputs
-        };
-
-        const r = await httpClient.put<BackendTestCase>(`/test/update`, dto);
         return adaptBackendTestCaseToUI(r);
     }
 
@@ -196,9 +178,12 @@ export class RealSnippetOperations implements SnippetOperations {
         return id;
     }
 
-    async testSnippet(testCase: Partial<TestCase>, snippetId?: string): Promise<TestCaseResult> {
-        const id = snippetId ?? this.currentSnippetId;
-        await httpClient.post(`/test/run`, { testCaseId: testCase.id, snippetId: id });
+    async testSnippet(testCase: Partial<TestCase>): Promise<TestCaseResult> {
+        await httpClient.post(`/test/run`, {
+            testCaseId: testCase.testId,
+            snippetId: testCase.snippetId,
+        });
+
         return "success";
     }
 
@@ -222,6 +207,10 @@ export class RealSnippetOperations implements SnippetOperations {
     async modifyLintingRule(rules: Rule[]): Promise<Rule[]> {
         await httpClient.put(`/rules/update`, rules);
         return rules;
+    }
+
+    async initializeRules(): Promise<void> {
+        await httpClient.post('/rules/initialize', {});
     }
 
     // ------------------------------------------------------------
