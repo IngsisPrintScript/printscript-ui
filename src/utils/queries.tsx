@@ -9,6 +9,7 @@ import {Rule} from "../types/Rule.ts";
 import { RealSnippetOperations } from './realSnippetOperations.ts';
 import {useAuth0} from "@auth0/auth0-react";
 import {queryClient} from "../App.tsx";
+import {ExecSnippetInput} from "./adapters/dataAdapters.ts";
 // import {useEffect} from "react";
 
 
@@ -108,6 +109,18 @@ export const usePostTestCase = (snippetId: string) => {
   );
 };
 
+export const useUpdateTestCase = (snippetId: string) => {
+  const snippetOperations = useSnippetsOperations();
+
+  return useMutation<TestCase, Error, TestCase>(
+      (tc) => snippetOperations.updateTestCase(tc),
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries(['testCases', snippetId]);
+        }
+      }
+  );
+};
 export const useRemoveTestCase = (snippetId: string) => {
   const snippetOperations = useSnippetsOperations()
   return useMutation<string, Error, string>(
@@ -119,7 +132,11 @@ export const useRemoveTestCase = (snippetId: string) => {
       }
   );
 };
-export type TestCaseResult = "success" | "fail"
+export type TestCaseResult = {
+  outputs: string[];
+  errors: string[];
+  status: "PASSED" | "FAILED";
+};
 
 export const useTestSnippet = () => {
   const snippetOperations = useSnippetsOperations()
@@ -164,8 +181,11 @@ export const useInitializeRules = ({ onSuccess }: { onSuccess?: () => void } = {
 // ------------------- MISC -------------------
 
 export const useFormatSnippet = () => {
-  const snippetOperations = useSnippetsOperations()
-  return useMutation<string, Error, string>(snippetContent => snippetOperations.formatSnippet(snippetContent));
+  const snippetOperations = useSnippetsOperations();
+
+  return useMutation<any, Error, string>(
+      (snippetId) => snippetOperations.formatSnippet(snippetId)
+  );
 };
 
 export const useDeleteSnippet = ({onSuccess}: {onSuccess: () => void}) => {
@@ -176,4 +196,11 @@ export const useDeleteSnippet = ({onSuccess}: {onSuccess: () => void}) => {
 export const useGetFileTypes = () => {
   const snippetOperations = useSnippetsOperations()
   return useQuery<FileType[], Error>('fileTypes', () => snippetOperations.getFileTypes());
+};
+
+export const useExecSnippet = () => {
+  const snippetOperations = useSnippetsOperations()
+  return useMutation(({ snippetId, inputs, envs }: ExecSnippetInput) =>
+      snippetOperations.execSnippet(snippetId, inputs,envs)
+  );
 };

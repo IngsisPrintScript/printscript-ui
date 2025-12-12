@@ -159,7 +159,7 @@ export const SnippetTable = ({
   );
 };
 
-const StyledCell = styled(TableCell)`
+export const StyledCell = styled(TableCell)`
   border: 0;
   font-weight: bold;
 `;

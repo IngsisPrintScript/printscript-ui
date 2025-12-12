@@ -6,12 +6,16 @@ import "prismjs/components/prism-javascript";
 import "prismjs/themes/prism-okaidia.css";
 import {Alert, Box, CircularProgress, IconButton, Tooltip, Typography} from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
+
 import {
+  useFormatSnippet,
+  useGetSnippetById,
+  useShareSnippet,
   useUpdateSnippetById
 } from "../utils/queries.tsx";
-import {useFormatSnippet, useGetSnippetById, useShareSnippet, useSnippetsOperations} from "../utils/queries.tsx";
+
 import {Bòx} from "../components/snippet-table/SnippetBox.tsx";
-import {BugReport, Delete, Download, Save, Share} from "@mui/icons-material";
+import {BugReport, Delete, Download, PlayArrow, Save, Share, StopRounded} from "@mui/icons-material";
 import {ShareSnippetModal} from "../components/snippet-detail/ShareSnippetModal.tsx";
 import {TestSnippetModal} from "../components/snippet-test/TestSnippetModal.tsx";
 import {Snippet} from "../utils/snippet.ts";
@@ -20,161 +24,186 @@ import ReadMoreIcon from '@mui/icons-material/ReadMore';
 import {queryClient} from "../App.tsx";
 import {DeleteConfirmationModal} from "../components/snippet-detail/DeleteConfirmationModal.tsx";
 
+
 type SnippetDetailProps = {
   id: string;
   handleCloseModal: () => void;
-}
+};
 
 const DownloadButton = ({snippet}: { snippet?: Snippet }) => {
   if (!snippet) return null;
   const file = new Blob([snippet.content], {type: 'text/plain'});
-
   return (
-    <Tooltip title={"Download"}>
-      <IconButton sx={{
-        cursor: "pointer"
-      }}>
-        <a download={`${snippet.name}.${snippet.extension}`} target="_blank"
-           rel="noreferrer" href={URL.createObjectURL(file)} style={{
-          textDecoration: "none",
-          color: "inherit",
-          display: 'flex',
-          alignItems: 'center',
-        }}>
-          <Download/>
-        </a>
-      </IconButton>
-    </Tooltip>
-  )
-}
-
-export const SnippetDetail = (props: SnippetDetailProps) => {
-  const {id, handleCloseModal} = props;
-  const [code, setCode] = useState(
-      ""
+      <Tooltip title={"Download"}>
+        <IconButton sx={{ cursor: "pointer" }}>
+          <a
+              download={`${snippet.name}.${snippet.extension}`}
+              target="_blank"
+              rel="noreferrer"
+              href={URL.createObjectURL(file)}
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                display: "flex",
+                alignItems: "center",
+              }}
+          >
+            <Download/>
+          </a>
+        </IconButton>
+      </Tooltip>
   );
-  const [shareModalOppened, setShareModalOppened] = useState(false)
-  const [deleteConfirmationModalOpen, setDeleteConfirmationModalOpen] = useState(false)
-  const [testModalOpened, setTestModalOpened] = useState(false);
+};
 
-  const snippetOperations = useSnippetsOperations();
+export const SnippetDetail = ({id, handleCloseModal}: SnippetDetailProps) => {
+  const [code, setCode] = useState("");
+  const [openShare, setOpenShare] = useState(false);
+  const [openTest, setOpenTest] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
+  const [runSnippet, setRunSnippet] = useState(false);
+
   const {data: snippet, isLoading} = useGetSnippetById(id);
-  const {mutate: shareSnippet, isLoading: loadingShare} = useShareSnippet()
-  const {mutate: formatSnippet, isLoading: isFormatLoading, data: formatSnippetData} = useFormatSnippet()
-  const {mutate: updateSnippet, isLoading: isUpdateSnippetLoading} = useUpdateSnippetById({onSuccess: () => queryClient.invalidateQueries(['snippet', id])})
-
-  // Set current snippet ID for format and test operations that need it
-  type SnippetOperationsWithSetter = {
-    setCurrentSnippetId: (id: string) => void;
-  };
+  const {mutate: shareSnippet, isLoading: loadingShare} = useShareSnippet();
+  const {mutate: formatSnippet, isLoading: isFormatLoading, data: formatted} = useFormatSnippet();
+  const {mutate: updateSnippet, isLoading: saving} = useUpdateSnippetById({
+    onSuccess: () => queryClient.invalidateQueries(["snippet", id])
+  });
 
   useEffect(() => {
-    if (id && 'setCurrentSnippetId' in snippetOperations) {
-        (snippetOperations as SnippetOperationsWithSetter)
-            .setCurrentSnippetId(id);
-        }
-    }, [id, snippetOperations]);
-
-  useEffect(() => {
-    if (snippet) {
-      setCode(snippet.content);
-    }
+    if (snippet) setCode(snippet.content);
   }, [snippet]);
 
   useEffect(() => {
-    if (formatSnippetData) {
-      setCode(formatSnippetData)
-    }
-  }, [formatSnippetData])
+    if (formatted) setCode(formatted);
+  }, [formatted]);
 
-
-  async function handleShareSnippet(userId: string) {
-    shareSnippet({snippetId: id, userId})
-  }
+  const handleShare = (userId: string) => {
+    shareSnippet({snippetId: id, userId});
+    setOpenShare(false);
+  };
 
   return (
-      <Box p={4} minWidth={'60vw'}>
-        <Box width={'100%'} p={2} display={'flex'} justifyContent={'flex-end'}>
-          <CloseIcon style={{cursor: "pointer"}} onClick={handleCloseModal}/>
+      <Box p={4} minWidth={"60vw"}>
+        <Box width={"100%"} p={2} display={"flex"} justifyContent={"flex-end"}>
+          <CloseIcon onClick={handleCloseModal} style={{cursor: "pointer"}}/>
         </Box>
-        {
-          isLoading ? (<>
-            <Typography fontWeight={"bold"} mb={2} variant="h4">Loading...</Typography>
-            <CircularProgress/>
-          </>) : <>
-            <Typography variant="h4" fontWeight={"bold"}>{snippet?.name ?? "Snippet"}</Typography>
-            <Box display="flex" flexDirection="row" gap="8px" padding="8px">
-              <Tooltip title={"Share"}>
-                <IconButton onClick={() => setShareModalOppened(true)}>
-                  <Share/>
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={"Test"}>
-                <IconButton onClick={() => setTestModalOpened(true)}>
-                  <BugReport/>
-                </IconButton>
-              </Tooltip>
-              <DownloadButton snippet={snippet}/>
-              {/*<Tooltip title={runSnippet ? "Stop run" : "Run"}>*/}
-              {/*  <IconButton onClick={() => setRunSnippet(!runSnippet)}>*/}
-              {/*    {runSnippet ? <StopRounded/> : <PlayArrow/>}*/}
-              {/*  </IconButton>*/}
-              {/*</Tooltip>*/}
-              {/* TODO: we can implement a live mode*/}
-              <Tooltip title={"Format"}>
-                <IconButton onClick={() => formatSnippet(code)} disabled={isFormatLoading}>
-                  <ReadMoreIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={"Save changes"}>
-                <IconButton color={"primary"}
-                            onClick={() => updateSnippet({
-                              id,
-                              updateSnippet: {
-                                name: snippet?.name ?? "",
-                                version: snippet?.version ?? "",
-                                language: snippet?.language ?? "",
-                                content: code
-                              }
-                            })}
-                            disabled={isUpdateSnippetLoading || snippet?.content === code} >
-                  <Save />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={"Delete"}>
-                <IconButton onClick={() => setDeleteConfirmationModalOpen(true)} >
-                  <Delete color={"error"} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Box display={"flex"} gap={2}>
-              <Bòx flex={1} height={"fit-content"} overflow={"none"} minHeight={"500px"} bgcolor={'black'} color={'white'} code={code}>
+
+        {isLoading ? (
+            <>
+              <Typography variant="h4" fontWeight="bold">Loading...</Typography>
+              <CircularProgress/>
+            </>
+        ) : (
+            <>
+              <Typography variant="h4" fontWeight="bold">
+                {snippet?.name ?? "Snippet"}
+              </Typography>
+
+              {/* Action bar */}
+              <Box display="flex" gap={1} p={1}>
+                <Tooltip title={"Share"}>
+                  <IconButton onClick={() => setOpenShare(true)}><Share/></IconButton>
+                </Tooltip>
+
+                <Tooltip title={"Test"}>
+                  <IconButton onClick={() => setOpenTest(true)}><BugReport/></IconButton>
+                </Tooltip>
+
+                <DownloadButton snippet={snippet}/>
+
+                <Tooltip title={runSnippet ? "Stop" : "Run"}>
+                  <IconButton onClick={() => setRunSnippet(!runSnippet)}>
+                    {runSnippet ? <StopRounded/> : <PlayArrow/>}
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Format snippet">
+                  <IconButton
+                      onClick={() => formatSnippet(id)}
+                      disabled={isFormatLoading}
+                  >
+                    <ReadMoreIcon/>
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title={"Save changes"}>
+                  <IconButton
+                      color="primary"
+                      disabled={saving || snippet?.content === code}
+                      onClick={() =>
+                          updateSnippet({
+                            id,
+                            updateSnippet: {
+                              name: snippet?.name ?? "",
+                              language: snippet?.language ?? "",
+                              version: snippet?.version ?? "",
+                              content: code,
+                            }
+                          })
+                      }
+                  >
+                    <Save/>
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Delete snippet">
+                  <IconButton onClick={() => setOpenDelete(true)}>
+                    <Delete color="error"/>
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              {/* ⚡ CODE EDITOR INSIDE BÒX */}
+              <Bòx
+                  flex={1}
+                  minHeight={"500px"}
+                  bgcolor="black"
+                  color="white"
+                  code={code}
+                  p={2}
+                  borderRadius={2}
+              >
                 <Editor
                     value={code}
-                    padding={10}
-                    onValueChange={(code) => setCode(code)}
-                    highlight={(code) => highlight(code, languages.js, "javascript")}
-                    maxLength={1000}
+                    padding={12}
+                    onValueChange={(c) => setCode(c)}
+                    highlight={(c) => highlight(c, languages.js, "javascript")}
                     style={{
-                      minHeight: "500px",
                       fontFamily: "monospace",
-                      fontSize: 17,
+                      minHeight: "500px",
+                      fontSize: 16,
                     }}
                 />
               </Bòx>
-            </Box>
-            <Box pt={1} flex={1} marginTop={2}>
-              <Alert severity="info">Output</Alert>
-              <SnippetExecution />
-            </Box>
-          </>
-        }
-        <ShareSnippetModal loading={loadingShare || isLoading} open={shareModalOppened}
-                           onClose={() => setShareModalOppened(false)}
-                           onShare={handleShareSnippet}/>
-        <TestSnippetModal open={testModalOpened} onClose={() => setTestModalOpened(false)} snippetId={""}/>
-        <DeleteConfirmationModal open={deleteConfirmationModalOpen} onClose={() => setDeleteConfirmationModalOpen(false)} id={snippet?.id ?? ""} setCloseDetails={handleCloseModal} />
+
+              {/* Executions */}
+              <Box mt={2}>
+                <Alert severity="info">Output</Alert>
+                <SnippetExecution snippet={snippet!} runSnippet={runSnippet} setRunSnippet={setRunSnippet}/>
+              </Box>
+            </>
+        )}
+
+        {/* Modals */}
+        <ShareSnippetModal
+            loading={loadingShare}
+            open={openShare}
+            onClose={() => setOpenShare(false)}
+            onShare={handleShare}
+        />
+
+        <TestSnippetModal
+            open={openTest}
+            snippetId={id}
+            onClose={() => setOpenTest(false)}
+        />
+
+        <DeleteConfirmationModal
+            open={openDelete}
+            onClose={() => setOpenDelete(false)}
+            id={snippet?.id ?? ""}
+            setCloseDetails={handleCloseModal}
+        />
       </Box>
   );
-}
-
+};

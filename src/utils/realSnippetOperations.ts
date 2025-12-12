@@ -1,22 +1,16 @@
-import { SnippetOperations } from './snippetOperations';
-import { httpClient, httpUserClient } from './httpClient';
+import {SnippetOperations} from './snippetOperations';
+import {httpClient, httpUserClient} from './httpClient';
 
-import {
-    CompilationEnum,
-    CreateSnippet,
-    PaginatedSnippets,
-    Snippet,
-    UpdateSnippet
-} from './snippet';
+import {CompilationEnum, CreateSnippet, PaginatedSnippets, Snippet, UpdateSnippet} from './snippet';
 
-import { PaginatedUsers } from './users';
-import { TestCase } from '../types/TestCase';
-import { TestCaseResult } from './queries';
-import { FileType } from '../types/FileType';
-import { Rule } from '../types/Rule';
+import {PaginatedUsers} from './users';
+import {TestCase} from '../types/TestCase';
+import {TestCaseResult} from './queries';
+import {FileType} from '../types/FileType';
+import {Rule} from '../types/Rule';
 
-import { adaptBackendTestCaseToUI, BackendTestCase } from './adapters/dataAdapters';
-import { BackendPaginatedSnippets, BackendSnippetWithLintData } from './backend';
+import {adaptBackendTestCaseToUI, BackendTestCase, RunSnippetResponse} from './adapters/dataAdapters';
+import {BackendPaginatedSnippets, BackendSnippetWithLintData} from './backend';
 
 export class RealSnippetOperations implements SnippetOperations {
 
@@ -63,7 +57,7 @@ export class RealSnippetOperations implements SnippetOperations {
         return this.adaptBackendSnippet(response);
     }
 
-    async getSnippetById(id: any): Promise<Snippet | undefined> {
+    async getSnippetById(id: string): Promise<Snippet | undefined> {
         try {
             const response = await httpClient.get<any>(`/snippet/${id}`);
             return this.adaptBackendSnippet(response);
@@ -138,12 +132,7 @@ export class RealSnippetOperations implements SnippetOperations {
     // USERS
     // ------------------------------------------------------------
 
-    async getUserFriends(
-        name?: string,
-        page?: number,
-        pageSize?: number
-    ): Promise<PaginatedUsers> {
-
+    async getUserFriends(name?: string, page?: number, pageSize?: number): Promise<PaginatedUsers> {
         const params: any = {};
         if (name) params.name = name;
         if (page !== undefined) params.page = page;
@@ -157,7 +146,13 @@ export class RealSnippetOperations implements SnippetOperations {
     // ------------------------------------------------------------
 
     async getTestCases(snippetId?: string): Promise<TestCase[]> {
-        const data = await httpClient.get<BackendTestCase[]>(`/test?snippetId=${snippetId || this.currentSnippetId}`);
+        const id = snippetId ?? this.currentSnippetId;
+
+        const data = await httpClient.get<BackendTestCase[]>(
+            `/test`,
+            { snippetId: id }
+        );
+
         return data.map(adaptBackendTestCaseToUI);
     }
 
@@ -166,7 +161,8 @@ export class RealSnippetOperations implements SnippetOperations {
             snippetId : snippetId || this.currentSnippetId,
             name: testCase.name ?? "New Test",
             inputs: testCase.inputs ?? [],
-            expectedOutputs: testCase.expectedOutputs ?? []
+            expectedOutputs: testCase.expectedOutputs ?? [],
+            envs: testCase.envs ?? {}
         };
 
         const r = await httpClient.post<BackendTestCase>(`/test/create`, dto);
@@ -174,17 +170,36 @@ export class RealSnippetOperations implements SnippetOperations {
     }
 
     async removeTestCase(id: string): Promise<string> {
-        await httpClient.delete(`/test?testId=${id}`);
+        await httpClient.delete(`/test`, { testId: id });
         return id;
     }
 
     async testSnippet(testCase: Partial<TestCase>): Promise<TestCaseResult> {
-        await httpClient.post(`/test/run`, {
-            testCaseId: testCase.testId,
-            snippetId: testCase.snippetId,
-        });
+        return await httpClient.post<TestCaseResult>(
+            `/test/run`,
+            {
+                testCaseId: testCase.testId,
+                snippetId: testCase.snippetId,
+            }
+        );
+    }
 
-        return "success";
+    async updateTestCase(testCase: TestCase): Promise<TestCase> {
+        const dto = {
+            testId: testCase.testId,
+            snippetId: testCase.snippetId,
+            name: testCase.name,
+            inputs: testCase.inputs,
+            outputs: testCase.expectedOutputs,
+            envs: testCase.envs || {}
+        };
+
+        const r = await httpClient.put<BackendTestCase>(
+            `/test/update`,
+            dto
+        );
+
+        return adaptBackendTestCaseToUI(r);
     }
 
     // ------------------------------------------------------------
@@ -219,10 +234,11 @@ export class RealSnippetOperations implements SnippetOperations {
 
     async formatSnippet(snippetContent: string, snippetId?: string): Promise<string> {
         const id = snippetId ?? this.currentSnippetId;
-        const status = await httpClient.get(`/rules/format?snippetId=${id}`);
+
+        const status = await httpClient.get(`/rules/format`, { snippetId: id});
 
         if (status === "VALID") {
-            const snip = await this.getSnippetById(id);
+            const snip = await this.getSnippetById(id || this.currentSnippetId || "");
             return snip?.content ?? snippetContent;
         }
         return snippetContent;
@@ -234,5 +250,16 @@ export class RealSnippetOperations implements SnippetOperations {
             { language: "javascript", extension: "js" },
             { language: "typescript", extension: "ts" }
         ];
+    }
+
+    async execSnippet(
+        snippetId: string,
+        inputs: string[],
+        envs: Record<string, string>
+    ): Promise<RunSnippetResponse> {
+        return httpClient.post(`/snippet/${snippetId}/execute`, {
+            inputs,
+            envs
+        });
     }
 }

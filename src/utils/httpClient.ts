@@ -65,17 +65,17 @@ export class HttpClient {
 
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     const url = new URL(`${this.baseURL}${endpoint}`);
-    
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value));
+          url.searchParams.set(key, String(value));
         }
       });
     }
 
-    return this.request<T>(`${endpoint}${url.search}`, {
-      method: 'GET',
+    return this.request<T>(url.pathname + url.search, {
+      method: 'GET'
     });
   }
 
@@ -95,8 +95,16 @@ export class HttpClient {
   }
 
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, {
+  async delete<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    const url = new URL(`${this.baseURL}${endpoint}`);
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.append(key, String(value));
+      });
+    }
+
+    return this.request<T>(url.pathname + url.search, {
       method: 'DELETE',
     });
   }

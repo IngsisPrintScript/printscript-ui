@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { TestCase } from "../../types/TestCase.ts";
+import {useEffect, useState} from "react";
+import { TestCase } from "../../types/TestCase";
 import { Autocomplete, Box, Button, Chip, TextField, Typography } from "@mui/material";
 import { BugReport, Delete, Save } from "@mui/icons-material";
-import { useTestSnippet } from "../../utils/queries.tsx";
+import { useTestSnippet } from "../../utils/queries";
 
 type TabPanelProps = {
     index: number;
@@ -13,18 +13,63 @@ type TabPanelProps = {
 };
 
 export const TabPanel = ({ value, index, test, saveTest, removeTest }: TabPanelProps) => {
+
     const [testData, setTestData] = useState<Partial<TestCase>>(
-        test ?? { name: "", inputs: [], expectedOutputs: [] }
+        test ?? {
+            name: "",
+            inputs: [],
+            expectedOutputs: [],
+            envs: {}
+        }
     );
 
     const { mutateAsync: testSnippet, data } = useTestSnippet();
 
+    const handleEnvChange = (envString: string) => {
+        const pairs = envString
+            .split(";")
+            .map(v => v.trim())
+            .filter(v => v.length > 0);
+
+        const envMap: Record<string, string> = {};
+        pairs.forEach(p => {
+            const [k, v] = p.split("=");
+            if (k && v) envMap[k.trim()] = v.trim();
+        });
+
+        useEffect(() => {
+            if (test) {
+                setTestData({
+                    name: test.name,
+                    inputs: test.inputs,
+                    expectedOutputs: test.expectedOutputs,
+                    envs: test.envs ?? {}
+                });
+            }
+        }, [test]);
+    };
+
+    const envString = Object.entries(testData.envs ?? {})
+        .map(([k, v]) => `${k}=${v}`)
+        .join(";");
+
+    const renderStatus = () => {
+        if (!data) {
+            return <Chip label="Pending" color="warning" size="small" />;
+        }
+
+        switch (data.status) {
+            case "PASSED":
+                return <Chip label="Pass" color="success" size="small" />;
+            case "FAILED":
+                return <Chip label="Fail" color="error" size="small" />;
+            default:
+                return <Chip label="Pending" color="warning" size="small" />;
+        }
+    };
+
     return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            style={{ width: "100%", height: "100%" }}
-        >
+        <div hidden={value !== index} style={{ width: "100%", height: "100%" }}>
             {value === index && (
                 <Box sx={{ px: 3 }} display="flex" flexDirection="column" gap={2}>
 
@@ -34,7 +79,9 @@ export const TabPanel = ({ value, index, test, saveTest, removeTest }: TabPanelP
                         <TextField
                             size="small"
                             value={testData.name ?? ""}
-                            onChange={(e) => setTestData({ ...testData, name: e.target.value })}
+                            onChange={(e) =>
+                                setTestData({ ...testData, name: e.target.value })
+                            }
                         />
                     </Box>
 
@@ -46,7 +93,9 @@ export const TabPanel = ({ value, index, test, saveTest, removeTest }: TabPanelP
                             freeSolo
                             size="small"
                             value={testData.inputs ?? []}
-                            onChange={(_, value) => setTestData({ ...testData, inputs: value })}
+                            onChange={(_, value) =>
+                                setTestData({ ...testData, inputs: value })
+                            }
                             renderTags={(value, getProps) =>
                                 value.map((v, i) => <Chip label={v} {...getProps({ index: i })} />)
                             }
@@ -74,8 +123,19 @@ export const TabPanel = ({ value, index, test, saveTest, removeTest }: TabPanelP
                         />
                     </Box>
 
-                    {/* BUTTONS */}
-                    <Box display="flex" gap={1}>
+                    {/* ENVS */}
+                    <Box>
+                        <Typography fontWeight="bold">Environment Variables</Typography>
+                        <TextField
+                            size="small"
+                            placeholder="VAR=123;FOO=bar"
+                            value={envString}
+                            onChange={(e) => handleEnvChange(e.target.value)}
+                            helperText="Formato: VAR=123;FOO=bar"
+                        />
+                    </Box>
+
+                    <Box display="flex" alignItems="center" gap={1}>
                         {removeTest && test?.testId && (
                             <Button
                                 variant="outlined"
@@ -90,8 +150,8 @@ export const TabPanel = ({ value, index, test, saveTest, removeTest }: TabPanelP
                         <Button
                             variant="outlined"
                             startIcon={<Save />}
-                            onClick={() => saveTest(testData)}
                             disabled={!testData.name}
+                            onClick={() => saveTest(testData)}
                         >
                             Save
                         </Button>
@@ -99,14 +159,22 @@ export const TabPanel = ({ value, index, test, saveTest, removeTest }: TabPanelP
                         <Button
                             variant="contained"
                             startIcon={<BugReport />}
-                            onClick={() => testSnippet(testData)}
+                            disabled={!test?.testId}
+                            onClick={() =>
+                                testSnippet({
+                                    testId: test!.testId,
+                                    snippetId: test!.snippetId
+                                })
+                            }
                         >
                             Test
                         </Button>
 
-                        {data && (data === "success"
-                            ? <Chip label="Pass" color="success" />
-                            : <Chip label="Fail" color="error" />)}
+                        {/* Spacer */}
+                        <Box flexGrow={1} />
+
+                        {/* Status */}
+                        {renderStatus()}
                     </Box>
                 </Box>
             )}

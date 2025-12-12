@@ -22,7 +22,15 @@ export interface BackendFileType {
   language: string;
   extension: string;
 }
-
+export interface RunSnippetResponse {
+    outputs: string[];
+    errors: string[];
+}
+export type ExecSnippetInput = {
+  snippetId: string;
+  inputs: string[];
+  envs: Record<string, string>;
+};
 export interface BackendRule {
   id: string;
   name: string;
@@ -36,6 +44,7 @@ export interface BackendTestCase {
   name: string;
   inputs: string[];
   outputs: string[];
+  envs: Record<string, string>;
 }
 
 function mapComplianceEnum(
@@ -116,7 +125,8 @@ export function adaptBackendTestCaseToUI(b: BackendTestCase): TestCase {
     snippetId: b.snippetId,
     name: b.name,
     inputs: b.inputs ?? [],
-    expectedOutputs: b.outputs ?? []
+    expectedOutputs: b.outputs ?? [],
+    envs: b.envs ?? {}
   };
 }
 

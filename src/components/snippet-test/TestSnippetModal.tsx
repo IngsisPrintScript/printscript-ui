@@ -2,7 +2,7 @@ import { Box, Divider, Tab, Tabs, Typography } from "@mui/material";
 import { ModalWrapper } from "../common/ModalWrapper.tsx";
 import { SyntheticEvent, useState } from "react";
 import { AddRounded } from "@mui/icons-material";
-import { useGetTestCases, usePostTestCase, useRemoveTestCase } from "../../utils/queries.tsx";
+import {useGetTestCases, usePostTestCase, useRemoveTestCase, useUpdateTestCase} from "../../utils/queries.tsx";
 import { TabPanel } from "./TabPanel.tsx";
 
 type TestSnippetModalProps = {
@@ -17,6 +17,7 @@ export const TestSnippetModal = ({ open, onClose, snippetId }: TestSnippetModalP
     const { data: testCases } = useGetTestCases(snippetId);
     const { mutateAsync: postTestCase } = usePostTestCase(snippetId);
     const { mutateAsync: deleteTestCase } = useRemoveTestCase(snippetId);
+    const { mutateAsync: updateTest } = useUpdateTestCase(snippetId);
 
     const handleChange = (_: SyntheticEvent, newValue: number) => {
         setValue(newValue);
@@ -58,7 +59,13 @@ export const TestSnippetModal = ({ open, onClose, snippetId }: TestSnippetModalP
                         index={index}
                         value={value}
                         test={testCase}
-                        saveTest={(test) => postTestCase({ ...test, snippetId })}
+                        saveTest={(partial) =>
+                            updateTest({
+                                ...testCase,
+                                ...partial,
+                                snippetId
+                            })
+                        }
                         removeTest={() => deleteTestCase(testCase.testId)}
                     />
                 ))}

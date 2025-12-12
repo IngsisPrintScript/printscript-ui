@@ -1,5 +1,5 @@
 import {alpha, Skeleton, styled, TableRow, TableRowProps} from "@mui/material";
-import {StyledTableCell} from "./SnippetTable.tsx";
+import {StyledCell as StyledTableCell} from "./SnippetTable.tsx";
 import {Snippet} from "../../utils/snippet.ts";
 
 const StyledTableRow = styled(TableRow)(({theme}) => ({

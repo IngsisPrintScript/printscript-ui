@@ -106,15 +106,17 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: AddSnippetModal
                 <Box sx={{background: "black", borderRadius: 2}}>
                     <Editor
                         value={code}
-                        padding={10}
                         onValueChange={setCode}
-                        highlight={c => highlight(c, languages.js, "javascript")}
+                        padding={10}
+                        highlight={(c) => highlight(c, languages.plaintext, "plaintext")}
                         style={{
                             minHeight: 300,
                             maxHeight: 600,
                             overflow: "auto",
                             fontFamily: "monospace",
                             fontSize: 17,
+                            color: "#f8f8f2",
+                            backgroundColor: "black",
                         }}
                     />
                 </Box>
