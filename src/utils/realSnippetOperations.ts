@@ -9,7 +9,12 @@ import {TestCaseResult} from './queries';
 import {FileType} from '../types/FileType';
 import {Rule} from '../types/Rule';
 
-import {adaptBackendTestCaseToUI, BackendTestCase, RunSnippetResponse} from './adapters/dataAdapters';
+import {
+    adaptBackendRuleToUI,
+    adaptBackendTestCaseToUI,
+    BackendTestCase,
+    RunSnippetResponse
+} from './adapters/dataAdapters';
 import {BackendPaginatedSnippets, BackendSnippetWithLintData} from './backend';
 
 export class RealSnippetOperations implements SnippetOperations {
@@ -207,20 +212,45 @@ export class RealSnippetOperations implements SnippetOperations {
     // ------------------------------------------------------------
 
     async getFormatRules(): Promise<Rule[]> {
-        return []; // implementar cuando rule-service esté listo
+        const backendRules = await httpClient.get<any[]>(
+            '/rules',
+            { type: 'FORMATTING' }
+        );
+        return backendRules.map(adaptBackendRuleToUI);
     }
 
     async getLintingRules(): Promise<Rule[]> {
-        return []; // implementar cuando rule-service esté listo
+        const backendRules = await httpClient.get<any[]>(
+            '/rules',
+            { type: 'LINT' }
+        );
+        return backendRules.map(adaptBackendRuleToUI);
     }
 
+
     async modifyFormatRule(rules: Rule[]): Promise<Rule[]> {
-        await httpClient.put(`/rules/update`, rules);
+        await Promise.all(
+            rules.map(rule =>
+                httpClient.put(
+                    `/rules/${rule.id}/update?newValue=${encodeURIComponent(
+                        String(rule.value ?? '')
+                    )}`
+                )
+            )
+        );
         return rules;
     }
 
     async modifyLintingRule(rules: Rule[]): Promise<Rule[]> {
-        await httpClient.put(`/rules/update`, rules);
+        await Promise.all(
+            rules.map(rule =>
+                httpClient.put(
+                    `/rules/${rule.id}/update?newValue=${encodeURIComponent(
+                        String(rule.value ?? '')
+                    )}`
+                )
+            )
+        );
         return rules;
     }
 
@@ -232,16 +262,16 @@ export class RealSnippetOperations implements SnippetOperations {
     // MISC
     // ------------------------------------------------------------
 
-    async formatSnippet(snippetContent: string, snippetId?: string): Promise<string> {
-        const id = snippetId ?? this.currentSnippetId;
-
-        const status = await httpClient.get(`/rules/format`, { snippetId: id});
-
-        if (status === "VALID") {
-            const snip = await this.getSnippetById(id || this.currentSnippetId || "");
-            return snip?.content ?? snippetContent;
+    async formatSnippet(snippetId: string): Promise<string> {
+        const status = await httpClient.get<string>(
+            '/rules/format',
+            { snippetId }
+        );
+        if (status === 'VALID') {
+            const snip = await this.getSnippetById(snippetId);
+            return snip?.content ?? '';
         }
-        return snippetContent;
+        return '';
     }
 
     async getFileTypes(): Promise<FileType[]> {

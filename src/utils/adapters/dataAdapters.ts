@@ -81,6 +81,7 @@ export type TestValidateDTO = {
   status: 'PASSED' | 'FAILED';
 };
 
+
 export function adaptBackendSnippetToUI(backendSnippet: BackendSnippet): Snippet {
   // TODO: Extraer author de snippetOwnerId si es necesario
   const author = backendSnippet.author || backendSnippet.snippetOwnerId || 'Unknown';

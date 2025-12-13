@@ -183,7 +183,7 @@ export const useInitializeRules = ({ onSuccess }: { onSuccess?: () => void } = {
 export const useFormatSnippet = () => {
   const snippetOperations = useSnippetsOperations();
 
-  return useMutation<any, Error, string>(
+  return useMutation<string, Error, string>(
       (snippetId) => snippetOperations.formatSnippet(snippetId)
   );
 };
