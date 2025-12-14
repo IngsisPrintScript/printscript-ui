@@ -1,37 +1,45 @@
-import {AUTH0_USERNAME,AUTH0_PASSWORD} from "../../src/utils/constants";
+import {
+  AUTH0_DOMAIN,
+  AUTH0_USERNAME,
+  AUTH0_PASSWORD,
+  FRONTEND_URL
+} from "../../src/utils/constants";
 
-describe('Protected routes test', () => {
-  it('should redirect to login when accessing a protected route unauthenticated', () => {
-    // Visit the protected route
+describe('Protected routes (Auth0)', () => {
+
+  it('shows login button when user is unauthenticated', () => {
     cy.visit('/');
 
-    cy.wait(1000)
-
-    // Check if the URL is redirected to the login page
-    cy.url().should('include', '/login');
+    cy.contains('button', 'Log in')
+        .should('exist')
+        .and('be.visible');
   });
 
-  it('should display login content', () => {
-    // Visit the login page
-    cy.visit('/login');
+  it('opens Auth0 Universal Login when clicking Log in', () => {
+    cy.visit('/');
 
-    // Look for text that is likely to appear on a login page
-    cy.contains('Log in').should('exist');
-    cy.contains('Password').should('exist'); // Adjust the text based on actual content
+    cy.contains('button', 'Log in').click();
+
+    // Cross-origin Auth0
+    cy.origin(AUTH0_DOMAIN, () => {
+      cy.contains('Log in').should('exist');
+      cy.contains('button', 'Continue').should('exist');
+    });
   });
 
-  it('should not redirect to login when the user is already authenticated', () => {
+  it('allows access to protected content when authenticated', () => {
     cy.loginToAuth0(
         AUTH0_USERNAME,
         AUTH0_PASSWORD
-    )
+    );
 
     cy.visit('/');
 
-    cy.wait(1000)
+    // Ya no debe pedir login
+    cy.contains('button', 'Log in').should('not.exist');
 
-    // Check if the URL is redirected to the login page
-    cy.url().should('not.include', '/login');
+    // La app renderiza normalmente
+    cy.contains('Printscript').should('exist');
   });
 
-})
+});

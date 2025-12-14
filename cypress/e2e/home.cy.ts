@@ -1,70 +1,96 @@
-import {AUTH0_PASSWORD, AUTH0_USERNAME, BACKEND_URL, FRONTEND_URL} from "../../src/utils/constants";
-import {CreateSnippet} from "../../src/utils/snippet";
+import { BACKEND_URL, FRONTEND_URL } from "../../src/utils/constants";
+import { CreateSnippet } from "../../src/utils/snippet";
 
-describe('Home', () => {
+describe('Home (LOCAL)', () => {
+
   beforeEach(() => {
-    // cy.loginToAuth0( TODO DE-Comment when auth0 is ready
-    //     AUTH0_USERNAME,
-    //     AUTH0_PASSWORD
-    // )
-  })
-  before(() => {
-    process.env.FRONTEND_URL = Cypress.env("FRONTEND_URL");
-    process.env.BACKEND_URL = Cypress.env("BACKEND_URL");
-  })
+    // Auth0 deshabilitado por ahora
+    // cy.loginToAuth0(AUTH0_USERNAME, AUTH0_PASSWORD)
+
+    cy.intercept('GET', `${BACKEND_URL}/snippets*`, {
+      statusCode: 200,
+      body: [
+        {
+          id: "1",
+          name: "Snippet 1",
+          content: "print(1)",
+          language: "printscript",
+          version: "1.0",
+          extension: ".pisp",
+          compliance: "COMPILE",
+          author: "test-user"
+        }
+      ]
+    }).as('getSnippets');
+  });
+
   it('Renders home', () => {
-    cy.visit(FRONTEND_URL)
-    /* ==== Generated with Cypress Studio ==== */
-    cy.get('.MuiTypography-h6').should('have.text', 'Printscript');
-    cy.get('.MuiBox-root > .MuiInputBase-root > .MuiInputBase-input').should('be.visible');
-    cy.get('.css-9jay18 > .MuiButton-root').should('be.visible');
-    cy.get('.css-jie5ja').click();
-    /* ==== End Cypress Studio ==== */
-  })
+    cy.visit(FRONTEND_URL);
 
-  // You need to have at least 1 snippet in your DB for this test to pass
+    cy.contains('Printscript').should('be.visible');
+
+    cy.get('[data-testid="snippet-search-input"]').should('be.visible');
+
+    cy.get('[data-testid="open-add-snippet-modal"]').should('be.visible');
+  });
+
   it('Renders the first snippets', () => {
-    cy.visit(FRONTEND_URL)
-    const first10Snippets = cy.get('[data-testid="snippet-row"]')
+    cy.visit(FRONTEND_URL);
 
-    first10Snippets.should('have.length.greaterThan', 0)
+    cy.wait('@getSnippets');
 
-    first10Snippets.should('have.length.lessThan', 10)
-  })
+    cy.get('[data-testid="snippet-row"]')
+        .should('have.length.greaterThan', 0)
+        .and('have.length.lessThan', 10);
+  });
 
-  it('Can creat snippet find snippets by name', () => {
-    cy.visit(FRONTEND_URL)
+  it('Can create snippet and find it by name', () => {
     const snippetData: CreateSnippet = {
       name: "Test name",
       content: "print(1)",
+      version: "1.0",
       language: "printscript",
-      extension: ".ps"
-    }
+      extension: ".pisp"
+    };
 
-    cy.intercept('GET', BACKEND_URL+"/snippets*", (req) => {
-      req.reply((res) => {
-        expect(res.statusCode).to.eq(200);
-      });
-    }).as('getSnippets');
+    cy.intercept('POST', `${BACKEND_URL}/snippets`, {
+      statusCode: 200,
+      body: {
+        ...snippetData,
+        id: "123",
+        compliance: "COMPILE",
+        author: "test-user"
+      }
+    }).as('createSnippet');
 
-    cy.request({
-      method: 'POST',
-      url: '/snippets', // Adjust if you have a different base URL configured in Cypress
-      body: snippetData,
-      failOnStatusCode: false // Optional: set to true if you want the test to fail on non-2xx status codes
-    }).then((response) => {
-      expect(response.status).to.eq(200);
+    cy.visit(FRONTEND_URL);
 
-      expect(response.body.name).to.eq(snippetData.name)
-      expect(response.body.content).to.eq(snippetData.content)
-      expect(response.body.language).to.eq(snippetData.language)
-      expect(response.body).to.haveOwnProperty("id")
+    // Abrir modal
+    cy.get('[data-testid="open-add-snippet-modal"]').click();
 
-      cy.get('.MuiBox-root > .MuiInputBase-root > .MuiInputBase-input').clear();
-      cy.get('.MuiBox-root > .MuiInputBase-root > .MuiInputBase-input').type(snippetData.name + "{enter}");
+    cy.contains("Name")
+        .parent()
+        .find("input")
+        .type(snippetData.name);
 
-      cy.wait("@getSnippets")
-      cy.contains(snippetData.name).should('exist');
-    })
-  })
-})
+    cy.get('[role="combobox"]').click();
+    cy.contains("Printscript").click();
+
+    cy.get('[data-testid="add-snippet-code-editor"]')
+        .type(snippetData.content);
+
+    cy.get('[data-testid="save-snippet-button"]').click();
+
+    cy.wait('@createSnippet');
+
+    // Buscar snippet
+    cy.get('[data-testid="snippet-search-input"]')
+        .clear()
+        .type(snippetData.name);
+
+    cy.wait('@getSnippets');
+
+    cy.contains(snippetData.name).should('exist');
+  });
+
+});

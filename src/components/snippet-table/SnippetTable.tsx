@@ -48,9 +48,10 @@ export const SnippetTable = ({
   const popoverRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const {page, page_size, count, handleChangePageSize, handleGoToPage} = usePaginationContext();
-  const {createSnackbar} = useSnackbarContext();
-  const {data: fileTypes} = useGetFileTypes();
+  const { page, page_size, count, handleChangePageSize, handleGoToPage } =
+      usePaginationContext();
+  const { createSnackbar } = useSnackbarContext();
+  const { data: fileTypes } = useGetFileTypes();
 
   const loadFileSnippet = async (target: EventTarget & HTMLInputElement) => {
     const file = target.files?.[0];
@@ -79,28 +80,34 @@ export const SnippetTable = ({
 
   return (
       <>
+        {/* HEADER */}
         <Box display="flex" justifyContent="space-between" mb={2}>
-          <Box sx={{background: "white", width: "30%", display: "flex"}}>
+          {/* SEARCH */}
+          <Box sx={{ background: "white", width: "30%", display: "flex" }}>
             <InputBase
-                sx={{ml: 1, flex: 1}}
+                data-testid="snippet-search-input"
+                sx={{ ml: 1, flex: 1 }}
                 placeholder="Search"
                 onChange={e => handleSearchSnippet(e.target.value)}
             />
-            <IconButton sx={{p: "10px"}}>
-              <Search/>
+            <IconButton data-testid="snippet-search-button">
+              <Search />
             </IconButton>
           </Box>
 
+          {/* ADD BUTTON */}
           <Button
               ref={popoverRef}
               variant="contained"
+              data-testid="open-add-snippet-modal"
               onClick={() => setPopoverOpened(true)}
           >
-            <Add/> Add Snippet
+            <Add /> Add Snippet
           </Button>
         </Box>
 
-        <Table sx={{borderSpacing: "0 10px", borderCollapse: "separate"}}>
+        {/* TABLE */}
+        <Table sx={{ borderSpacing: "0 10px", borderCollapse: "separate" }}>
           <TableHead>
             <TableRow>
               <StyledCell>Name</StyledCell>
@@ -112,15 +119,17 @@ export const SnippetTable = ({
 
           <TableBody>
             {loading
-                ? Array.from({length: 10}).map((_, i) => <LoadingSnippetRow key={i}/>)
+                ? Array.from({ length: 10 }).map((_, i) => (
+                    <LoadingSnippetRow key={i} />
+                ))
                 : snippets?.map(sn => (
                     <SnippetRow
                         key={sn.id}
+                        data-testid={`snippet-row-${sn.id}`}
                         snippet={sn}
                         onClick={() => handleClickSnippet(sn.id)}
                     />
-                ))
-            }
+                ))}
           </TableBody>
 
           <TablePagination
@@ -128,31 +137,49 @@ export const SnippetTable = ({
               page={page}
               rowsPerPage={page_size}
               onPageChange={(_, p) => handleGoToPage(p)}
-              onRowsPerPageChange={e => handleChangePageSize(+e.target.value)}
+              onRowsPerPageChange={e =>
+                  handleChangePageSize(+e.target.value)
+              }
           />
         </Table>
 
-        {/* MODAL */}
+        {/* ADD MODAL */}
         <AddSnippetModal
             open={addModalOpened}
             onClose={() => setAddModalOpened(false)}
             defaultSnippet={defaultSnippet}
         />
 
-        {/* MENU */}
+        {/* POPOVER MENU */}
         <Menu
             anchorEl={popoverRef.current}
             open={popoverOpened}
             onClose={() => setPopoverOpened(false)}
         >
-          <MenuItem onClick={() => setAddModalOpened(true)}>Create snippet</MenuItem>
-          <MenuItem onClick={() => inputRef.current?.click()}>Load snippet from file</MenuItem>
+          <MenuItem
+              data-testid="menu-create-snippet"
+              onClick={() => {
+                setPopoverOpened(false);
+                setAddModalOpened(true);
+              }}
+          >
+            Create snippet
+          </MenuItem>
+
+          <MenuItem
+              data-testid="menu-upload-snippet"
+              onClick={() => inputRef.current?.click()}
+          >
+            Load snippet from file
+          </MenuItem>
         </Menu>
 
+        {/* FILE INPUT */}
         <input
             hidden
             type="file"
             ref={inputRef}
+            data-testid="upload-file-input"
             onChange={e => loadFileSnippet(e.target)}
         />
       </>

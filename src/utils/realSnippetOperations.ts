@@ -227,31 +227,29 @@ export class RealSnippetOperations implements SnippetOperations {
         return backendRules.map(adaptBackendRuleToUI);
     }
 
-
     async modifyFormatRule(rules: Rule[]): Promise<Rule[]> {
-        await Promise.all(
-            rules.map(rule =>
-                httpClient.put(
-                    `/rules/${rule.id}/update?newValue=${encodeURIComponent(
-                        String(rule.value ?? '')
-                    )}`
-                )
-            )
+        const payload = rules.map(rule => ({
+            ruleId: rule.id,
+            value: String(rule.value ?? '')
+        }));
+
+        return await httpClient.put<Rule[]>(
+            '/rules/update',
+            payload
         );
-        return rules;
     }
 
+
     async modifyLintingRule(rules: Rule[]): Promise<Rule[]> {
-        await Promise.all(
-            rules.map(rule =>
-                httpClient.put(
-                    `/rules/${rule.id}/update?newValue=${encodeURIComponent(
-                        String(rule.value ?? '')
-                    )}`
-                )
-            )
+        const payload = rules.map(rule => ({
+            ruleId: rule.id,
+            value: String(rule.value ?? '')
+        }));
+
+        return await httpClient.put<Rule[]>(
+            '/rules/update',
+            payload
         );
-        return rules;
     }
 
     async initializeRules(): Promise<void> {

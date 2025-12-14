@@ -152,19 +152,26 @@ export const useGetFormatRules = () => {
   return useQuery<Rule[], Error>('formatRules', () => snippetOperations.getFormatRules());
 };
 
-export const useModifyFormatRules = ({onSuccess}: {onSuccess: () => void}) => {
-  const snippetOperations = useSnippetsOperations()
-  return useMutation<Rule[], Error, Rule[]>(rule => snippetOperations.modifyFormatRule(rule), {onSuccess});
+export const useModifyFormatRules = ({ onSuccess }: { onSuccess: () => void }) => {
+  const snippetOperations = useSnippetsOperations();
+  return useMutation<Rule[], Error, Rule[]>(
+      rules => snippetOperations.modifyFormatRule(rules),
+      { onSuccess }
+  );
 };
+
 
 export const useGetLintingRules = () => {
   const snippetOperations = useSnippetsOperations()
   return useQuery<Rule[], Error>('lintingRules', () => snippetOperations.getLintingRules());
 };
 
-export const useModifyLintingRules = ({onSuccess}: {onSuccess: () => void}) => {
-  const snippetOperations = useSnippetsOperations()
-  return useMutation<Rule[], Error, Rule[]>(rule => snippetOperations.modifyLintingRule(rule), {onSuccess});
+export const useModifyLintingRules = ({ onSuccess }: { onSuccess: () => void }) => {
+  const snippetOperations = useSnippetsOperations();
+  return useMutation<Rule[], Error, Rule[]>(
+      rules => snippetOperations.modifyLintingRule(rules),
+      { onSuccess }
+  );
 };
 
 export const useInitializeRules = ({ onSuccess }: { onSuccess?: () => void } = {}) => {

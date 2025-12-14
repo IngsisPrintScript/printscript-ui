@@ -1,49 +1,46 @@
 import './App.css';
-import {RouterProvider} from "react-router";
+import { RouterProvider } from "react-router";
 import {createBrowserRouter, Outlet} from "react-router-dom";
 import HomeScreen from "./screens/Home.tsx";
-import {QueryClient, QueryClientProvider} from "react-query";
+import { QueryClient, QueryClientProvider } from "react-query";
 import RulesScreen from "./screens/Rules.tsx";
 import { registerTokenGetter } from './auth/tokenProvider.ts';
-import {Auth0Provider, useAuth0, withAuthenticationRequired} from '@auth0/auth0-react';
+import {
+    Auth0Provider,
+    useAuth0,
+    withAuthenticationRequired
+} from '@auth0/auth0-react';
 import CallbackScreen from "./screens/Callback.tsx";
 
 const ProtectedApp = withAuthenticationRequired(() => {
     const { getAccessTokenSilently } = useAuth0();
 
     registerTokenGetter(async () => {
-        try {
-            return await getAccessTokenSilently({
-                authorizationParams: {
-                    audience: "https://snippet-search-ingsis"
-                }
-            });
-        } catch (e) {
-            console.error("Error obteniendo token:", e);
-            return null;
-        }
+        return await getAccessTokenSilently({
+            authorizationParams: {
+                audience: "https://snippet-search-ingsis",
+            },
+        });
     });
 
-    return (
-        <Outlet />
-    );
+    return <Outlet />;
 });
 
 const router = createBrowserRouter([
     {
         path: "/callback",
-        element: <CallbackScreen />
+        element: <CallbackScreen />,
     },
     {
         element: <ProtectedApp />,
         children: [
-            { path: "/", element: <HomeScreen/> },
-            { path: "/rules", element: <RulesScreen/> }
-        ]
-    }
+            { path: "/", element: <HomeScreen /> },
+            { path: "/rules", element: <RulesScreen /> },
+        ],
+    },
 ]);
 
-export const queryClient = new QueryClient()
+export const queryClient = new QueryClient();
 
 const App = () => {
     return (
@@ -64,7 +61,5 @@ const App = () => {
         </Auth0Provider>
     );
 };
-// To enable Auth0 integration change the following line
+
 export default App;
-// for this one:
-//export default withAuthenticationRequired(App);

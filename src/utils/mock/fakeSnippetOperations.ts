@@ -56,8 +56,13 @@ export class FakeSnippetOperations implements SnippetOperations {
 
   shareSnippet(snippetId: string): Promise<Snippet> {
     return new Promise(resolve => {
-      // @ts-expect-error, it will always find it in the fake store
-      setTimeout(() => resolve(this.fakeStore.getSnippetById(snippetId)), DELAY)
+      setTimeout(() => {
+        const snippet = this.fakeStore.getSnippetById(snippetId)
+        if (!snippet) {
+          throw new Error("Snippet not found")
+        }
+        resolve(snippet)
+      }, DELAY)
     })
   }
 
@@ -124,6 +129,33 @@ export class FakeSnippetOperations implements SnippetOperations {
   modifyLintingRule(newRules: Rule[]): Promise<Rule[]> {
     return new Promise(resolve => {
       setTimeout(() => resolve(this.fakeStore.modifyLintingRule(newRules)), DELAY)
+    })
+  }
+
+  updateTestCase(testCase: TestCase): Promise<TestCase> {
+    return new Promise(resolve => {
+      setTimeout(() => resolve(testCase), DELAY)
+    })
+  }
+
+  execSnippet(
+      snippetId: string,
+      _inputs: string[],
+      _envs: Record<string, string>
+  ): Promise<{ outputs: string[]; errors: string[] }> {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve({
+          outputs: [`mock output for ${snippetId}`],
+          errors: []
+        })
+      }, DELAY)
+    })
+  }
+
+  initializeRules(): Promise<void> {
+    return new Promise(resolve => {
+      setTimeout(() => resolve(), DELAY)
     })
   }
 }
