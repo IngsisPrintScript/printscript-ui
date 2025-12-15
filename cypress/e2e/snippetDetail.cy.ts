@@ -1,107 +1,54 @@
-import { BACKEND_URL } from "../../src/utils/constants";
+import '../support/commands';
+import { BACKEND_URL } from "../support/constants";
 import { FakeSnippetStore } from "../../src/utils/mock/fakeSnippetStore";
+import {
+  AUTH0_USERNAME,
+  AUTH0_PASSWORD
+} from "../support/constants";
 
-describe('Add snippet tests (LOCAL)', () => {
+describe('Add snippet tests (LOCAL + Auth0)', () => {
 
   const fakeStore = new FakeSnippetStore();
+  const snippet = fakeStore.listSnippetDescriptors()[0];
 
   beforeEach(() => {
+    cy.loginToAuth0(AUTH0_USERNAME, AUTH0_PASSWORD);
 
-    // 🔹 Listado de snippets (tabla)
-    cy.intercept(
-        'POST',
-        `${BACKEND_URL}/snippet/filter`,
-        {
-          statusCode: 200,
-          body: {
-            page: 0,
-            page_size: 10,
-            count: 1,
-            snippets: [
-              {
-                snippet: fakeStore.getSnippetById(
-                    fakeStore.listSnippetDescriptors()[0].id
-                ),
-                valid: "PASSED",
-                user: "test-user",
-                content: "print(1)"
-              }
-            ]
-          }
-        }
-    ).as('getSnippets');
+    cy.intercept('POST', '**/snippet/filter*').as('getSnippets');
+    cy.intercept('GET', '**/snippet/*').as('getSnippetById');
+    cy.intercept('PUT', '**/snippet/*/share').as('shareSnippet');
+    cy.intercept('POST', '**/snippet/*/execute').as('runSnippet');
+    cy.intercept('GET', '**/rules/format*').as('formatSnippet');
+    cy.intercept('PUT', '**/snippet/*/update/text').as('saveSnippet');
+    cy.intercept('DELETE', '**/snippet/*').as('deleteSnippet');
+    cy.intercept('GET', '**/users*').as('getUsers');
 
-    // 🔹 Detalle del snippet
-    cy.intercept(
-        'GET',
-        `${BACKEND_URL}/snippet/*`,
-        {
-          statusCode: 200,
-          body: fakeStore.listSnippetDescriptors()[0],
-        }
-    ).as('getSnippetById');
-
-    // 🔹 Share snippet
-    cy.intercept(
-        'PUT',
-        `${BACKEND_URL}/snippet/*/share`,
-        { statusCode: 200 }
-    ).as('shareSnippet');
-
-    // 🔹 Run snippet
-    cy.intercept(
-        'POST',
-        `${BACKEND_URL}/snippet/*/run`,
-        {
-          statusCode: 200,
-          body: {
-            outputs: ["mock output"],
-            errors: []
-          }
-        }
-    ).as('runSnippet');
-
-    // 🔹 Format snippet
-    cy.intercept(
-        'POST',
-        `${BACKEND_URL}/snippet/*/format`,
-        {
-          statusCode: 200,
-          body: "// formatted snippet"
-        }
-    ).as('formatSnippet');
-
-    // 🔹 Save snippet
-    cy.intercept(
-        'PUT',
-        `${BACKEND_URL}/snippet/*`,
-        { statusCode: 200 }
-    ).as('saveSnippet');
-
-    // 🔹 Delete snippet
-    cy.intercept(
-        'DELETE',
-        `${BACKEND_URL}/snippet/*`,
-        { statusCode: 200 }
-    ).as('deleteSnippet');
-
-    // Entramos a la app
     cy.visit('/');
 
-    // Esperamos que cargue la tabla
     cy.wait('@getSnippets');
 
-    // Abrimos el primer snippet
-    cy.get('[data-testid="snippet-row"]').first().click();
+    cy.get('[data-testid^="snippet-row-"]')
+        .first()
+        .click();
 
     cy.wait('@getSnippetById');
   });
 
-  it('Can share a snippet', () => {
-    cy.get('[aria-label="Share"]').click();
+  // ─────────────────────────────────────────
+  // TESTS
+  // ─────────────────────────────────────────
 
-    cy.get('[role="combobox"]').click();
-    cy.get('[role="option"]').first().click();
+  it('Can share a snippet', () => {
+    cy.get('[data-testid="snippet-share-button"]').click();
+
+    cy.contains("Type the user's name")
+        .parent()
+        .find('input')
+        .type('test', { delay: 50 });
+
+    cy.wait('@getUsers');
+
+    cy.get('[role="listbox"] [role="option"]').first().click();
 
     cy.contains('button', 'Share').click();
 
@@ -111,7 +58,7 @@ describe('Add snippet tests (LOCAL)', () => {
   });
 
   it('Can run snippets', () => {
-    cy.get('[data-testid="PlayArrowIcon"]').click();
+    cy.get('[data-testid="snippet-run-button"]').click();
 
     cy.wait('@runSnippet');
 
@@ -120,17 +67,21 @@ describe('Add snippet tests (LOCAL)', () => {
   });
 
   it('Can format snippets', () => {
-    cy.get('[data-testid="ReadMoreIcon"]').click();
+    cy.get('[data-testid="snippet-format-button"]').click();
 
     cy.wait('@formatSnippet');
   });
 
   it('Can save snippets', () => {
-    cy.get('[data-testid="snippet-code-editor"]')
+    cy.get('.npm__react-simple-code-editor__textarea')
+        .filter(':visible')
+        .should('have.length', 1)
         .click()
-        .type('\nSome new line');
+        .type('{selectall}{backspace}println(2);');
 
-    cy.get('[data-testid="SaveIcon"]').click();
+    cy.get('[data-testid="snippet-save-button"]')
+        .should('not.be.disabled')
+        .click();
 
     cy.wait('@saveSnippet')
         .its('response.statusCode')
@@ -138,7 +89,7 @@ describe('Add snippet tests (LOCAL)', () => {
   });
 
   it('Can delete snippets', () => {
-    cy.get('[data-testid="DeleteIcon"]').click();
+    cy.get('[data-testid="snippet-delete-button"]').click();
 
     cy.contains('button', 'Delete').click();
 

@@ -1,29 +1,39 @@
+import '../support/commands';
 import {
-  AUTH0_DOMAIN,
   AUTH0_USERNAME,
   AUTH0_PASSWORD,
-  FRONTEND_URL
-} from "../../src/utils/constants";
+  AUTH0_DOMAIN
+} from "../support/constants";
 
-describe('Protected routes (Auth0)', () => {
+describe('Protected routes (REAL E2E + Auth0)', () => {
 
-  it('shows login button when user is unauthenticated', () => {
+  it('redirects to Auth0 when user is unauthenticated', () => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+
     cy.visit('/');
 
-    cy.contains('button', 'Log in')
-        .should('exist')
-        .and('be.visible');
+    // Cypress espera automáticamente el redirect
+    cy.origin(`https://${AUTH0_DOMAIN}`, () => {
+      cy.url().should('include', '/u/login');
+      cy.contains(/continue|log in/i).should('exist');
+    });
   });
 
-  it('opens Auth0 Universal Login when clicking Log in', () => {
+  it('shows Auth0 Universal Login page', () => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+
     cy.visit('/');
 
-    cy.contains('button', 'Log in').click();
+    cy.origin(`https://${AUTH0_DOMAIN}`, () => {
+      cy.get('input[type="email"], #username')
+          .should('be.visible');
 
-    // Cross-origin Auth0
-    cy.origin(AUTH0_DOMAIN, () => {
-      cy.contains('Log in').should('exist');
-      cy.contains('button', 'Continue').should('exist');
+      cy.get('input[type="password"], #password')
+          .should('be.visible');
+
+      cy.contains(/continue|log in/i).should('be.visible');
     });
   });
 
@@ -35,11 +45,11 @@ describe('Protected routes (Auth0)', () => {
 
     cy.visit('/');
 
-    // Ya no debe pedir login
-    cy.contains('button', 'Log in').should('not.exist');
+    // Ya no hay redirect
+    cy.url().should('eq', Cypress.config().baseUrl + '/');
 
-    // La app renderiza normalmente
-    cy.contains('Printscript').should('exist');
+    // App renderizada
+    cy.contains('Printscript', { timeout: 20000 }).should('exist');
   });
 
 });

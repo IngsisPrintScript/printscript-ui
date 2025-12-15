@@ -1,96 +1,58 @@
-import { BACKEND_URL, FRONTEND_URL } from "../../src/utils/constants";
+import '../support/commands';
 import { CreateSnippet } from "../../src/utils/snippet";
 
-describe('Home (LOCAL)', () => {
+describe("Home (REAL E2E + Auth0)", () => {
 
   beforeEach(() => {
-    // Auth0 deshabilitado por ahora
-    // cy.loginToAuth0(AUTH0_USERNAME, AUTH0_PASSWORD)
-
-    cy.intercept('GET', `${BACKEND_URL}/snippets*`, {
-      statusCode: 200,
-      body: [
-        {
-          id: "1",
-          name: "Snippet 1",
-          content: "print(1)",
-          language: "printscript",
-          version: "1.0",
-          extension: ".pisp",
-          compliance: "COMPILE",
-          author: "test-user"
-        }
-      ]
-    }).as('getSnippets');
+    cy.loginToAuth0(
+        Cypress.env("AUTH0_USERNAME"),
+        Cypress.env("AUTH0_PASSWORD")
+    );
   });
 
-  it('Renders home', () => {
-    cy.visit(FRONTEND_URL);
+  it("Renders home", () => {
+    cy.visit("/");
 
-    cy.contains('Printscript').should('be.visible');
-
-    cy.get('[data-testid="snippet-search-input"]').should('be.visible');
-
-    cy.get('[data-testid="open-add-snippet-modal"]').should('be.visible');
+    cy.contains("Printscript", { timeout: 20000 }).should("be.visible");
+    cy.get('[data-testid="snippet-search-input"]').should("be.visible");
+    cy.get('[data-testid="open-add-snippet-modal"]').should("be.visible");
   });
 
-  it('Renders the first snippets', () => {
-    cy.visit(FRONTEND_URL);
+  it("Renders the first snippets", () => {
+    cy.visit("/");
 
-    cy.wait('@getSnippets');
-
-    cy.get('[data-testid="snippet-row"]')
-        .should('have.length.greaterThan', 0)
-        .and('have.length.lessThan', 10);
+    cy.get('[data-testid^="snippet-row-"]', { timeout: 20000 })
+        .should("have.length.greaterThan", 0)
+        .and("have.length.lessThan", 10);
   });
 
-  it('Can create snippet and find it by name', () => {
-    const snippetData: CreateSnippet = {
-      name: "Test name",
-      content: "print(1)",
-      version: "1.0",
-      language: "printscript",
-      extension: ".pisp"
-    };
+  it("Can create snippet and find it by name", () => {
+    const name = `Test ${Date.now()}`;
 
-    cy.intercept('POST', `${BACKEND_URL}/snippets`, {
-      statusCode: 200,
-      body: {
-        ...snippetData,
-        id: "123",
-        compliance: "COMPILE",
-        author: "test-user"
-      }
-    }).as('createSnippet');
+    cy.visit("/");
 
-    cy.visit(FRONTEND_URL);
-
-    // Abrir modal
     cy.get('[data-testid="open-add-snippet-modal"]').click();
+    cy.get('[data-testid="menu-create-snippet"]').click();
 
-    cy.contains("Name")
-        .parent()
-        .find("input")
-        .type(snippetData.name);
+    cy.get('[data-testid="snippet-name-input"]').type(name);
 
-    cy.get('[role="combobox"]').click();
-    cy.contains("Printscript").click();
+    cy.get('[data-testid="snippet-language-select"]').click();
+    cy.get('[data-testid="menu-option-printscript"]')
+        .should("be.visible")
+        .click();
+    cy.get('[data-testid="add-snippet-code-textarea"]')
+        .clear({ force: true })
+        .type("println(1);", { force: true });
 
-    cy.get('[data-testid="add-snippet-code-editor"]')
-        .type(snippetData.content);
+    cy.get('[data-testid="save-snippet-button"]')
+        .should("be.enabled")
+        .click();
 
-    cy.get('[data-testid="save-snippet-button"]').click();
-
-    cy.wait('@createSnippet');
-
-    // Buscar snippet
+    // Buscar
     cy.get('[data-testid="snippet-search-input"]')
         .clear()
-        .type(snippetData.name);
+        .type(name);
 
-    cy.wait('@getSnippets');
-
-    cy.contains(snippetData.name).should('exist');
+    cy.contains(name, { timeout: 20000 }).should("exist");
   });
-
 });
