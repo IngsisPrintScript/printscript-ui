@@ -15,7 +15,7 @@ import {
     BackendTestCase,
     RunSnippetResponse
 } from './adapters/dataAdapters';
-import {BackendPaginatedSnippets, BackendSnippetWithLintData} from './backend';
+import {BackendPaginatedSnippets, BackendSnippetListItem} from './backend';
 
 export class RealSnippetOperations implements SnippetOperations {
 
@@ -43,8 +43,8 @@ export class RealSnippetOperations implements SnippetOperations {
 
         return {
             page: response.page,
-            page_size: response.page_size,
-            count: response.count,
+            page_size: response.pageSize,
+            count: response.total,
             snippets: response.snippets.map(s => this.adaptBackendSnippet(s))
         };
     }
@@ -113,23 +113,25 @@ export class RealSnippetOperations implements SnippetOperations {
     // ADAPTER SNIPPET
     // ------------------------------------------------------------
 
-    private adaptBackendSnippet(backend: BackendSnippetWithLintData): Snippet {
-        const status = backend.valid;
+    private adaptBackendSnippet(
+        backend: BackendSnippetListItem
+    ): Snippet {
+
         const compliance: CompilationEnum =
-            status === "PASSED" ? "COMPILE" :
-                status === "FAILED" ? "NOT COMPILE" :
-                    status === "PENDING" ? "PENDING" :
+            backend.status === "PASSED" ? "COMPILE" :
+                backend.status === "FAILED" ? "NOT COMPILE" :
+                    backend.status === "PENDING" ? "PENDING" :
                         "NOT CHECKED";
 
         return {
-            id: backend.snippet.id,
-            name: backend.snippet.name,
-            content: backend.content ?? "",
-            version: backend.snippet.version ?? "1.0",
-            language: backend.snippet.language,
-            extension: backend.snippet.language === "printscript" ? "pisp" : "txt",
+            id: backend.id,
+            name: backend.name,
+            content: "", // no viene en listado
+            version: backend.version ?? "1.0",
+            language: backend.language,
+            extension: backend.language === "printscript" ? "pisp" : "txt",
             compliance,
-            author: backend.user
+            author: backend.author
         };
     }
 

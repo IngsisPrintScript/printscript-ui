@@ -1,0 +1,18 @@
+name: UI CI - PROD
+
+on:
+  push:
+    branches: [ "group-2-main" ]
+
+permissions:
+  contents: write
+  packages: write
+  
+jobs:
+  deploy-ui-prod:
+    uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
+    with:
+      environment: production
+      service_name: ui
+      image_route: ghcr.io/ingsisprintscript/printscript-ui:prod
+    secrets: inherit
