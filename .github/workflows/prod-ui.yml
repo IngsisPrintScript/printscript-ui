@@ -2,21 +2,17 @@ name: UI CI - PROD
 
 on:
   push:
-    branches:
-      - group-2-main
+    branches: [ "group-2-main" ]
 
 permissions:
   contents: write
   packages: write
-
+  
 jobs:
-  ui-prod:
+  deploy-ui-prod:
     uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
     with:
-      image-name: printscript-ui
-      image-tag: prod
-      compose-service: ui
       environment: production
-      compose-file: docker-compose.prod.yml
-      server-path: /home/ingsis2/infra-ingsis
+      service_name: ui
+      image_route: ghcr.io/ingsisprintscript/printscript-ui:prod
     secrets: inherit
