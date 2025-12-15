@@ -3,8 +3,6 @@ name: UI CI
 on:
   push:
     branches:
-      - dev
-      - main
       - group-2-main
 
 permissions:
