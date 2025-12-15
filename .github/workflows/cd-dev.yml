@@ -1,4 +1,4 @@
-name: UI CI - DEV
+name: UI CD - DEV
 
 on:
   push:
