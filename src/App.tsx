@@ -45,8 +45,8 @@ export const queryClient = new QueryClient();
 const App = () => {
     return (
         <Auth0Provider
-            domain={import.meta.env.VITE_AUTH0_DOMAIN}
             clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
+            domain={import.meta.env.VITE_AUTH0_DOMAIN}
             authorizationParams={{
                 redirect_uri: window.location.origin + "/callback",
                 audience: "https://snippet-search-ingsis",
