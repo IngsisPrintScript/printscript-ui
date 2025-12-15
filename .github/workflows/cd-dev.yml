@@ -15,6 +15,7 @@ jobs:
     with:
       image-name: printscript-ui
       image-tag: dev
+      environment: development
       compose-service: ui
       compose-file: docker-compose.dev.yml
       server-path: /home/ingsis2/infra-ingsis
