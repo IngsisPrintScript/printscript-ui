@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
   packages: write
-
+  id-token: write
 jobs:
   deploy-ui-dev:
     uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
