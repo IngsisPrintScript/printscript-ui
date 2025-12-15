@@ -5,6 +5,10 @@ on:
     branches:
       - group-2-main
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   ui-prod:
     uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
