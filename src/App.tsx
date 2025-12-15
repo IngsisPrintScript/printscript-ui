@@ -43,7 +43,10 @@ const router = createBrowserRouter([
 export const queryClient = new QueryClient();
 
 const App = () => {
+    console.log("AUTH0 DOMAIN:", import.meta.env.VITE_AUTH0_DOMAIN);
+    console.log("AUTH0 CLIENT:", import.meta.env.VITE_AUTH0_CLIENT_ID);
     return (
+
         <Auth0Provider
             domain={import.meta.env.VITE_AUTH0_DOMAIN}
             clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
