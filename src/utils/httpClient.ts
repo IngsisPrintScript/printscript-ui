@@ -127,6 +127,6 @@ export class HttpClient {
 }
 
 // Instancia singleton del cliente HTTP
-export const httpClient = new HttpClient(import.meta.env.VITE_BACKEND_URL);
+export const httpClient = new HttpClient(import.meta.env.VITE_API_BASE_URL);
 export const httpUserClient = new HttpClient(import.meta.env.VITE_API_USER_BASE_URL);
 
