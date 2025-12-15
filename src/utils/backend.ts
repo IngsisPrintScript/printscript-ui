@@ -7,16 +7,18 @@ export type BackendSnippet = {
     version: string;
 };
 
-export type BackendSnippetWithLintData = {
-    snippet: BackendSnippet;
-    valid: BackendSnippetStatus;
-    user: string;
-    content: string;
-};
+export interface BackendSnippetListItem {
+    id: string;
+    name: string;
+    language: string;
+    version: string;
+    author: string;
+    status: "PASSED" | "FAILED" | "PENDING";
+}
 
-export type BackendPaginatedSnippets = {
+export interface BackendPaginatedSnippets {
     page: number;
-    page_size: number;
-    count: number;
-    snippets: BackendSnippetWithLintData[];
-};
+    pageSize: number;
+    total: number;
+    snippets: BackendSnippetListItem[];
+}
