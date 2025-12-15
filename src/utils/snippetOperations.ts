@@ -4,6 +4,7 @@ import {TestCase} from "../types/TestCase.ts";
 import {TestCaseResult} from "./queries.tsx";
 import {FileType} from "../types/FileType.ts";
 import {Rule} from "../types/Rule.ts";
+import {RunSnippetResponse} from "./adapters/dataAdapters.ts";
 
 export interface SnippetOperations {
   listSnippetDescriptors(page: number,pageSize: number,sippetName?: string): Promise<PaginatedSnippets>
@@ -27,6 +28,7 @@ export interface SnippetOperations {
   formatSnippet(snippet: string): Promise<string>
 
   postTestCase(testCase: Partial<TestCase>, snippetId : string): Promise<TestCase>
+  updateTestCase(testCase: TestCase): Promise<TestCase>
 
   removeTestCase(id: string): Promise<string>
 
@@ -39,4 +41,8 @@ export interface SnippetOperations {
   modifyFormatRule(newRules: Rule[]): Promise<Rule[]>
 
   modifyLintingRule(newRules: Rule[]): Promise<Rule[]>
+
+  execSnippet(snippetId: string, inputs: string[], envs: Record<string, string>): Promise<RunSnippetResponse>
+  //Rule to initialize rules on first load
+  initializeRules(): Promise<void>
 }

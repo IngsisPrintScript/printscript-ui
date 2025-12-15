@@ -1,37 +1,55 @@
-import {AUTH0_USERNAME,AUTH0_PASSWORD} from "../../src/utils/constants";
+import '../support/commands';
+import {
+  AUTH0_USERNAME,
+  AUTH0_PASSWORD,
+  AUTH0_DOMAIN
+} from "../support/constants";
 
-describe('Protected routes test', () => {
-  it('should redirect to login when accessing a protected route unauthenticated', () => {
-    // Visit the protected route
+describe('Protected routes (REAL E2E + Auth0)', () => {
+
+  it('redirects to Auth0 when user is unauthenticated', () => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+
     cy.visit('/');
 
-    cy.wait(1000)
-
-    // Check if the URL is redirected to the login page
-    cy.url().should('include', '/login');
+    // Cypress espera automáticamente el redirect
+    cy.origin(`https://${AUTH0_DOMAIN}`, () => {
+      cy.url().should('include', '/u/login');
+      cy.contains(/continue|log in/i).should('exist');
+    });
   });
 
-  it('should display login content', () => {
-    // Visit the login page
-    cy.visit('/login');
+  it('shows Auth0 Universal Login page', () => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
 
-    // Look for text that is likely to appear on a login page
-    cy.contains('Log in').should('exist');
-    cy.contains('Password').should('exist'); // Adjust the text based on actual content
+    cy.visit('/');
+
+    cy.origin(`https://${AUTH0_DOMAIN}`, () => {
+      cy.get('input[type="email"], #username')
+          .should('be.visible');
+
+      cy.get('input[type="password"], #password')
+          .should('be.visible');
+
+      cy.contains(/continue|log in/i).should('be.visible');
+    });
   });
 
-  it('should not redirect to login when the user is already authenticated', () => {
+  it('allows access to protected content when authenticated', () => {
     cy.loginToAuth0(
         AUTH0_USERNAME,
         AUTH0_PASSWORD
-    )
+    );
 
     cy.visit('/');
 
-    cy.wait(1000)
+    // Ya no hay redirect
+    cy.url().should('eq', Cypress.config().baseUrl + '/');
 
-    // Check if the URL is redirected to the login page
-    cy.url().should('not.include', '/login');
+    // App renderizada
+    cy.contains('Printscript', { timeout: 20000 }).should('exist');
   });
 
-})
+});

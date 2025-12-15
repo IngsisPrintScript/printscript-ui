@@ -5,51 +5,68 @@ import {useEffect, useState} from "react";
 import {User} from "../../utils/users.ts";
 
 type ShareSnippetModalProps = {
-  open: boolean
-  onClose: () => void
-  onShare: (userId: string) => void
-  loading: boolean
-}
-export const ShareSnippetModal = (props: ShareSnippetModalProps) => {
-  const {open, onClose, onShare, loading} = props
-  const [name, setName] = useState("")
-  const [debouncedName, setDebouncedName] = useState("")
-  const {data, isLoading} = useGetUsers(debouncedName, 1, 5)
-  const [selectedUser, setSelectedUser] = useState<User | undefined>()
+  open: boolean;
+  onClose: () => void;
+  onShare: (userId: string) => void;
+  loading: boolean;
+};
 
+export const ShareSnippetModal = ({open, onClose, onShare, loading}: ShareSnippetModalProps) => {
+  const [name, setName] = useState("");
+  const [debouncedName, setDebouncedName] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | undefined>();
+
+  const {data, isLoading} = useGetUsers(debouncedName, 0, 5);
+
+  // Debounce para evitar spam al backend
   useEffect(() => {
-    const getData = setTimeout(() => {
-      setDebouncedName(name)
-    }, 3000)
-    return () => clearTimeout(getData)
-  }, [name])
+    const timer = setTimeout(() => {
+      setDebouncedName(name);
+    }, 500);
 
-  function handleSelectUser(newValue: User | null) {
-    newValue && setSelectedUser(newValue)
-  }
+    return () => clearTimeout(timer);
+  }, [name]);
+
+  // Si el input cambia manualmente, limpiar selección
+  const handleInputChange = (_: unknown, newValue: string | null) => {
+    setName(newValue || "");
+    setSelectedUser(undefined);
+  };
+
+  // Cuando selecciona una persona de la lista
+  const handleSelectUser = (_: unknown, newValue: User | null) => {
+    setSelectedUser(newValue || undefined);
+  };
 
   return (
       <ModalWrapper open={open} onClose={onClose}>
-        <Typography variant={"h5"}>Share your snippet</Typography>
+        <Typography variant="h5">Share your snippet</Typography>
         <Divider/>
         <Box mt={2}>
           <Autocomplete
               renderInput={(params) => <TextField {...params} label="Type the user's name"/>}
               options={data?.users ?? []}
-              isOptionEqualToValue={(option, value) =>
-                  option.userId === value.userId
-              }
-              getOptionLabel={(option) => option.name}
               loading={isLoading}
-              value={selectedUser}
-              onInputChange={(_: unknown, newValue: string | null) => newValue && setName(newValue)}
-              onChange={(_: unknown, newValue: User | null) => handleSelectUser(newValue)}
+              value={selectedUser ?? null}
+              onInputChange={handleInputChange}
+              onChange={handleSelectUser}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.userId === value.userId}
           />
-          <Box mt={4} display={"flex"} width={"100%"} justifyContent={"flex-end"}>
-            <Button onClick={onClose} variant={"outlined"}>Cancel</Button>
-            <Button disabled={!selectedUser || loading} onClick={() => selectedUser && onShare(selectedUser?.userId)} sx={{marginLeft: 2}} variant={"contained"}>Share</Button>
+
+          <Box mt={4} display="flex" justifyContent="flex-end">
+            <Button onClick={onClose} variant="outlined">Cancel</Button>
+
+            <Button
+                disabled={!selectedUser || loading}
+                onClick={() => selectedUser && onShare(selectedUser.userId)}
+                sx={{ml: 2}}
+                variant="contained"
+            >
+              Share
+            </Button>
           </Box>
         </Box>
       </ModalWrapper>
-  )
-}
+  );
+};

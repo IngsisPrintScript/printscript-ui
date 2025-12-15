@@ -65,17 +65,17 @@ export class HttpClient {
 
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     const url = new URL(`${this.baseURL}${endpoint}`);
-    
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value));
+          url.searchParams.set(key, String(value));
         }
       });
     }
 
-    return this.request<T>(`${endpoint}${url.search}`, {
-      method: 'GET',
+    return this.request<T>(url.pathname + url.search, {
+      method: 'GET'
     });
   }
 
@@ -87,16 +87,33 @@ export class HttpClient {
     });
   }
 
-  async put<T>(endpoint: string, body?: any): Promise<T> {
-    return this.request<T>(endpoint, {
+  async put<T>(endpoint: string, body?: any, params?: Record<string, any>): Promise<T> {
+    const url = new URL(`${this.baseURL}${endpoint}`);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.set(key, String(value));
+        }
+      });
+    }
+
+    return this.request<T>(url.pathname + url.search, {
       method: 'PUT',
       body: JSON.stringify(body),
     });
   }
 
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, {
+  async delete<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    const url = new URL(`${this.baseURL}${endpoint}`);
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.append(key, String(value));
+      });
+    }
+
+    return this.request<T>(url.pathname + url.search, {
       method: 'DELETE',
     });
   }
@@ -110,6 +127,6 @@ export class HttpClient {
 }
 
 // Instancia singleton del cliente HTTP
-export const httpClient = new HttpClient(import.meta.env.VITE_API_BASE_URL);
+export const httpClient = new HttpClient(import.meta.env.VITE_BACKEND_URL);
 export const httpUserClient = new HttpClient(import.meta.env.VITE_API_USER_BASE_URL);
 

@@ -1,70 +1,58 @@
-import {AUTH0_PASSWORD, AUTH0_USERNAME, BACKEND_URL, FRONTEND_URL} from "../../src/utils/constants";
-import {CreateSnippet} from "../../src/utils/snippet";
+import '../support/commands';
+import { CreateSnippet } from "../../src/utils/snippet";
 
-describe('Home', () => {
+describe("Home (REAL E2E + Auth0)", () => {
+
   beforeEach(() => {
-    // cy.loginToAuth0( TODO DE-Comment when auth0 is ready
-    //     AUTH0_USERNAME,
-    //     AUTH0_PASSWORD
-    // )
-  })
-  before(() => {
-    process.env.FRONTEND_URL = Cypress.env("FRONTEND_URL");
-    process.env.BACKEND_URL = Cypress.env("BACKEND_URL");
-  })
-  it('Renders home', () => {
-    cy.visit(FRONTEND_URL)
-    /* ==== Generated with Cypress Studio ==== */
-    cy.get('.MuiTypography-h6').should('have.text', 'Printscript');
-    cy.get('.MuiBox-root > .MuiInputBase-root > .MuiInputBase-input').should('be.visible');
-    cy.get('.css-9jay18 > .MuiButton-root').should('be.visible');
-    cy.get('.css-jie5ja').click();
-    /* ==== End Cypress Studio ==== */
-  })
+    cy.loginToAuth0(
+        Cypress.env("AUTH0_USERNAME"),
+        Cypress.env("AUTH0_PASSWORD")
+    );
+  });
 
-  // You need to have at least 1 snippet in your DB for this test to pass
-  it('Renders the first snippets', () => {
-    cy.visit(FRONTEND_URL)
-    const first10Snippets = cy.get('[data-testid="snippet-row"]')
+  it("Renders home", () => {
+    cy.visit("/");
 
-    first10Snippets.should('have.length.greaterThan', 0)
+    cy.contains("Printscript", { timeout: 20000 }).should("be.visible");
+    cy.get('[data-testid="snippet-search-input"]').should("be.visible");
+    cy.get('[data-testid="open-add-snippet-modal"]').should("be.visible");
+  });
 
-    first10Snippets.should('have.length.lessThan', 10)
-  })
+  it("Renders the first snippets", () => {
+    cy.visit("/");
 
-  it('Can creat snippet find snippets by name', () => {
-    cy.visit(FRONTEND_URL)
-    const snippetData: CreateSnippet = {
-      name: "Test name",
-      content: "print(1)",
-      language: "printscript",
-      extension: ".ps"
-    }
+    cy.get('[data-testid^="snippet-row-"]', { timeout: 20000 })
+        .should("have.length.greaterThan", 0)
+        .and("have.length.lessThan", 10);
+  });
 
-    cy.intercept('GET', BACKEND_URL+"/snippets*", (req) => {
-      req.reply((res) => {
-        expect(res.statusCode).to.eq(200);
-      });
-    }).as('getSnippets');
+  it("Can create snippet and find it by name", () => {
+    const name = `Test ${Date.now()}`;
 
-    cy.request({
-      method: 'POST',
-      url: '/snippets', // Adjust if you have a different base URL configured in Cypress
-      body: snippetData,
-      failOnStatusCode: false // Optional: set to true if you want the test to fail on non-2xx status codes
-    }).then((response) => {
-      expect(response.status).to.eq(200);
+    cy.visit("/");
 
-      expect(response.body.name).to.eq(snippetData.name)
-      expect(response.body.content).to.eq(snippetData.content)
-      expect(response.body.language).to.eq(snippetData.language)
-      expect(response.body).to.haveOwnProperty("id")
+    cy.get('[data-testid="open-add-snippet-modal"]').click();
+    cy.get('[data-testid="menu-create-snippet"]').click();
 
-      cy.get('.MuiBox-root > .MuiInputBase-root > .MuiInputBase-input').clear();
-      cy.get('.MuiBox-root > .MuiInputBase-root > .MuiInputBase-input').type(snippetData.name + "{enter}");
+    cy.get('[data-testid="snippet-name-input"]').type(name);
 
-      cy.wait("@getSnippets")
-      cy.contains(snippetData.name).should('exist');
-    })
-  })
-})
+    cy.get('[data-testid="snippet-language-select"]').click();
+    cy.get('[data-testid="menu-option-printscript"]')
+        .should("be.visible")
+        .click();
+    cy.get('[data-testid="add-snippet-code-textarea"]')
+        .clear({ force: true })
+        .type("println(1);", { force: true });
+
+    cy.get('[data-testid="save-snippet-button"]')
+        .should("be.enabled")
+        .click();
+
+    // Buscar
+    cy.get('[data-testid="snippet-search-input"]')
+        .clear()
+        .type(name);
+
+    cy.contains(name, { timeout: 20000 }).should("exist");
+  });
+});

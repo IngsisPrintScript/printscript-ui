@@ -13,132 +13,180 @@ import {
   TablePagination,
   TableRow
 } from "@mui/material";
-import {AddSnippetModal} from "./AddSnippetModal.tsx";
+
+import {AddSnippetModal} from "./AddSnippetModal";
 import {useRef, useState} from "react";
 import {Add, Search} from "@mui/icons-material";
-import {LoadingSnippetRow, SnippetRow} from "./SnippetRow.tsx";
-import {CreateSnippetWithLang, getFileLanguage, Snippet} from "../../utils/snippet.ts";
-import {usePaginationContext} from "../../contexts/paginationContext.tsx";
-import {useSnackbarContext} from "../../contexts/snackbarContext.tsx";
-import {useGetFileTypes} from "../../utils/queries.tsx";
+import {LoadingSnippetRow, SnippetRow} from "./SnippetRow";
+import {
+  CreateSnippetWithLang,
+  getFileLanguage,
+  Snippet
+} from "../../utils/snippet";
+import {usePaginationContext} from "../../contexts/paginationContext";
+import {useSnackbarContext} from "../../contexts/snackbarContext";
+import {useGetFileTypes} from "../../utils/queries";
 
 type SnippetTableProps = {
   handleClickSnippet: (id: string) => void;
   snippets?: Snippet[];
   loading: boolean;
-  handleSearchSnippet: (snippetName: string) => void;
-}
+  handleSearchSnippet: (text: string) => void;
+};
 
-export const SnippetTable = (props: SnippetTableProps) => {
-  const {snippets, handleClickSnippet, loading,handleSearchSnippet} = props;
+export const SnippetTable = ({
+                               snippets,
+                               handleClickSnippet,
+                               loading,
+                               handleSearchSnippet
+                             }: SnippetTableProps) => {
+
   const [addModalOpened, setAddModalOpened] = useState(false);
-  const [popoverMenuOpened, setPopoverMenuOpened] = useState(false)
-  const [snippet, setSnippet] = useState<CreateSnippetWithLang | undefined>()
+  const [popoverOpened, setPopoverOpened] = useState(false);
+  const [defaultSnippet, setDefaultSnippet] = useState<CreateSnippetWithLang>();
 
   const popoverRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const {page, page_size: pageSize, count, handleChangePageSize, handleGoToPage} = usePaginationContext()
-  const {createSnackbar} = useSnackbarContext()
-  const {data: fileTypes} = useGetFileTypes();
 
-  const handleLoadSnippet = async (target: EventTarget & HTMLInputElement) => {
-    const files = target.files
-    if (!files || !files.length) {
-      createSnackbar('error',"Please select at leat one file")
-      return
-    }
-    const file = files[0]
-    const splitName = file.name.split(".")
-    const fileType = getFileLanguage(fileTypes ?? [], splitName.at(-1))
+  const { page, page_size, count, handleChangePageSize, handleGoToPage } =
+      usePaginationContext();
+  const { createSnackbar } = useSnackbarContext();
+  const { data: fileTypes } = useGetFileTypes();
+
+  const loadFileSnippet = async (target: EventTarget & HTMLInputElement) => {
+    const file = target.files?.[0];
+    if (!file) return;
+
+    const ext = file.name.split(".").pop();
+    const fileType = getFileLanguage(fileTypes ?? [], ext);
+
     if (!fileType) {
-      createSnackbar('error', `File type ${splitName.at(-1)} not supported`)
-      return
+      createSnackbar("error", `File type ${ext} not supported`);
+      return;
     }
-    file.text().then((text) => {
-      setSnippet({
-        name: splitName[0],
-        content: text,
-        language: fileType.language,
-        extension: fileType.extension
-      })
-    }).catch(e => {
-      console.error(e)
-    }).finally(() => {
-      setAddModalOpened(true)
-      target.value = ""
-    })
-  }
 
-  function handleClickMenu() {
-    setPopoverMenuOpened(false)
-  }
+    const content = await file.text();
+    setDefaultSnippet({
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      content,
+      version: "1.0",
+      language: fileType.language,
+      extension: fileType.extension
+    });
+
+    setAddModalOpened(true);
+    target.value = "";
+  };
 
   return (
       <>
-        <Box display="flex" flexDirection="row" justifyContent="space-between">
-          <Box sx={{background: 'white', width: '30%', display: 'flex'}}>
+        {/* HEADER */}
+        <Box display="flex" justifyContent="space-between" mb={2}>
+          {/* SEARCH */}
+          <Box sx={{ background: "white", width: "30%", display: "flex" }}>
             <InputBase
-                sx={{ml: 1, flex: 1}}
-                placeholder="Search FileType"
-                inputProps={{'aria-label': 'search'}}
+                data-testid="snippet-search-input"
+                sx={{ ml: 1, flex: 1 }}
+                placeholder="Search"
                 onChange={e => handleSearchSnippet(e.target.value)}
             />
-            <IconButton type="button" sx={{p: '10px'}} aria-label="search">
-              <Search/>
+            <IconButton data-testid="snippet-search-button">
+              <Search />
             </IconButton>
           </Box>
-          <Button ref={popoverRef} variant="contained" disableRipple sx={{boxShadow: 0}}
-                  onClick={() => setPopoverMenuOpened(true)}>
-            <Add/>
-            Add Snippet
+
+          {/* ADD BUTTON */}
+          <Button
+              ref={popoverRef}
+              variant="contained"
+              data-testid="open-add-snippet-modal"
+              onClick={() => setPopoverOpened(true)}
+          >
+            <Add /> Add Snippet
           </Button>
         </Box>
-        <Table size="medium" sx={{borderSpacing: "0 10px", borderCollapse: "separate"}}>
+
+        {/* TABLE */}
+        <Table sx={{ borderSpacing: "0 10px", borderCollapse: "separate" }}>
           <TableHead>
-            <TableRow sx={{fontWeight: 'bold'}}>
-              <StyledTableCell sx={{fontWeight: "bold"}}>Name</StyledTableCell>
-              <StyledTableCell sx={{fontWeight: "bold"}}>Language</StyledTableCell>
-              <StyledTableCell sx={{fontWeight: "bold"}}>Author</StyledTableCell>
-              <StyledTableCell sx={{fontWeight: "bold"}}>Conformance</StyledTableCell>
+            <TableRow>
+              <StyledCell>Name</StyledCell>
+              <StyledCell>Language</StyledCell>
+              <StyledCell>Author</StyledCell>
+              <StyledCell>Conformance</StyledCell>
             </TableRow>
           </TableHead>
-          <TableBody>{
-            loading ? (
-                <>
-                  {Array.from({length: 10}).map((_, index) => (
-                      <LoadingSnippetRow key={index}/>
-                  ))}
-                </>
-            ) : (
-                <>
-                  {
-                      snippets && snippets.map((snippet) => (
-                          <SnippetRow data-testid={"snippet-row"}
-                                      onClick={() => handleClickSnippet(snippet.id)} key={snippet.id} snippet={snippet}/>
-                      ))
-                  }
-                </>
-            )
-          }
+
+          <TableBody>
+            {loading
+                ? Array.from({ length: 10 }).map((_, i) => (
+                    <LoadingSnippetRow key={i} />
+                ))
+                : snippets?.map(sn => (
+                    <SnippetRow
+                        key={sn.id}
+                        data-testid={`snippet-row-${sn.id}`}
+                        snippet={sn}
+                        onClick={() => handleClickSnippet(sn.id)}
+                    />
+                ))}
           </TableBody>
-          <TablePagination count={count} page={page} rowsPerPage={pageSize}
-                           onPageChange={(_, page) => handleGoToPage(page)}
-                           onRowsPerPageChange={e => handleChangePageSize(Number(e.target.value))}/>
+
+          <TablePagination
+              count={count}
+              page={page}
+              rowsPerPage={page_size}
+              onPageChange={(_, p) => handleGoToPage(p)}
+              onRowsPerPageChange={e =>
+                  handleChangePageSize(+e.target.value)
+              }
+          />
         </Table>
-        <AddSnippetModal defaultSnippet={snippet} open={addModalOpened}
-                         onClose={() => setAddModalOpened(false)}/>
-        <Menu anchorEl={popoverRef.current} open={popoverMenuOpened} onClick={handleClickMenu}>
-          <MenuItem onClick={() => setAddModalOpened(true)}>Create snippet</MenuItem>
-          <MenuItem onClick={() => inputRef?.current?.click()}>Load snippet from file</MenuItem>
+
+        {/* ADD MODAL */}
+        <AddSnippetModal
+            open={addModalOpened}
+            onClose={() => setAddModalOpened(false)}
+            defaultSnippet={defaultSnippet}
+        />
+
+        {/* POPOVER MENU */}
+        <Menu
+            anchorEl={popoverRef.current}
+            open={popoverOpened}
+            onClose={() => setPopoverOpened(false)}
+        >
+          <MenuItem
+              data-testid="menu-create-snippet"
+              onClick={() => {
+                setPopoverOpened(false);
+                setAddModalOpened(true);
+              }}
+          >
+            Create snippet
+          </MenuItem>
+
+          <MenuItem
+              data-testid="menu-upload-snippet"
+              onClick={() => inputRef.current?.click()}
+          >
+            Load snippet from file
+          </MenuItem>
         </Menu>
-        <input hidden type={"file"} ref={inputRef} multiple={false} data-testid={"upload-file-input"}
-               onChange={e => handleLoadSnippet(e?.target)}/>
+
+        {/* FILE INPUT */}
+        <input
+            hidden
+            type="file"
+            ref={inputRef}
+            data-testid="upload-file-input"
+            onChange={e => loadFileSnippet(e.target)}
+        />
       </>
-  )
-}
+  );
+};
 
-
-export const StyledTableCell = styled(TableCell)`
-    border: 0;
-    align-items: center;
-`
+export const StyledCell = styled(TableCell)`
+  border: 0;
+  font-weight: bold;
+`;

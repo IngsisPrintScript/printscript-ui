@@ -1,4 +1,4 @@
-import { Snippet, ComplianceEnum } from '../snippet';
+import { Snippet, CompilationEnum } from '../snippet';
 import { FileType } from '../../types/FileType';
 import { Rule } from '../../types/Rule';
 import { TestCase } from '../../types/TestCase';
@@ -22,7 +22,15 @@ export interface BackendFileType {
   language: string;
   extension: string;
 }
-
+export interface RunSnippetResponse {
+    outputs: string[];
+    errors: string[];
+}
+export type ExecSnippetInput = {
+  snippetId: string;
+  inputs: string[];
+  envs: Record<string, string>;
+};
 export interface BackendRule {
   id: string;
   name: string;
@@ -31,27 +39,28 @@ export interface BackendRule {
 }
 
 export interface BackendTestCase {
-  id: string;
+  testId: string;
+  snippetId: string;
   name: string;
-  input?: string[];
-  output?: string[];
+  inputs: string[];
+  outputs: string[];
+  envs: Record<string, string>;
 }
-
 
 function mapComplianceEnum(
   lintStatus?: string,
   formatStatus?: string
-): ComplianceEnum {
-  if (lintStatus === 'VALID' && formatStatus === 'VALID') {
-    return 'compliant';
+): CompilationEnum {
+  if (lintStatus === 'PASSED' && formatStatus === 'PASSED') {
+    return 'COMPILE';
   }
-  if (lintStatus === 'INVALID' || formatStatus === 'INVALID') {
-    return 'not-compliant';
+  if (lintStatus === 'FAILED' || formatStatus === 'FAILED') {
+    return 'NOT COMPILE';
   }
-  if (lintStatus === 'LINTING' || formatStatus === 'FORMATTING') {
-    return 'pending';
+  if (lintStatus === 'PENDING' || formatStatus === 'PENDING') {
+    return 'PENDING';
   }
-  return 'pending';
+  return 'NOT CHECKED';
 }
 
 export type TestRunResultDTO = {
@@ -72,16 +81,18 @@ export type TestValidateDTO = {
   status: 'PASSED' | 'FAILED';
 };
 
+
 export function adaptBackendSnippetToUI(backendSnippet: BackendSnippet): Snippet {
   // TODO: Extraer author de snippetOwnerId si es necesario
   const author = backendSnippet.author || backendSnippet.snippetOwnerId || 'Unknown';
-  
+
   // TODO: Extraer extension del language
   const extension = getExtensionFromLanguage(backendSnippet.language);
-  
+
   return {
     id: backendSnippet.id,
     name: backendSnippet.name,
+    version: backendSnippet.version || '1.0',
     content: backendSnippet.content,
     language: backendSnippet.language,
     extension: extension,
@@ -109,12 +120,14 @@ export function adaptBackendRuleToUI(backendRule: BackendRule): Rule {
 }
 
 
-export function adaptBackendTestCaseToUI(backendTestCase: BackendTestCase): TestCase {
+export function adaptBackendTestCaseToUI(b: BackendTestCase): TestCase {
   return {
-    id: backendTestCase.id,
-    name: backendTestCase.name,
-    inputs: backendTestCase.input ?? [],
-    expectedOutputs: backendTestCase.output ?? [],
+    testId: b.testId,
+    snippetId: b.snippetId,
+    name: b.name,
+    inputs: b.inputs ?? [],
+    expectedOutputs: b.outputs ?? [],
+    envs: b.envs ?? {}
   };
 }
 

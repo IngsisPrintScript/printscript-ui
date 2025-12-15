@@ -1,37 +1,36 @@
-/// <reference types="cypress" />
-// ***********************************************
-// This example commands.ts shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
-//
-// declare global {
-//   namespace Cypress {
-//     interface Chainable {
-//       login(email: string, password: string): Chainable<void>
-//       drag(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       dismiss(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       visit(originalFn: CommandOriginalFn, url: string, options: Partial<VisitOptions>): Chainable<Element>
-//     }
-//   }
-// }
+Cypress.Commands.add(
+    'loginToAuth0',
+    (username: string, password: string) => {
+        cy.session(
+            `auth0-${username}`,
+            () => {
+                cy.visit('/');
+
+                cy.origin(
+                    `https://${Cypress.env('AUTH0_DOMAIN')}`,
+                    { args: { username, password } },
+                    ({ username, password }) => {
+                        cy.get('input[name="username"]').type(username);
+                        cy.get('input[name="password"]').type(password, { log: false });
+                        cy.contains('button', 'Continue').click();
+                    }
+                );
+
+                // ⏳ ESPERAR a que Auth0 vuelva a la app
+                cy.location('pathname', { timeout: 20000 })
+                    .should('not.include', '/callback');
+            },
+            {
+                validate: () => {
+                    // ⏳ esperar a que Auth0 escriba el storage
+                    cy.window({ timeout: 20000 }).should((win) => {
+                        const key = Object.keys(win.localStorage).find(k =>
+                            k.startsWith('@@auth0spajs@@')
+                        );
+                        expect(key, 'Auth0 session key').to.exist;
+                    });
+                },
+            }
+        );
+    }
+);

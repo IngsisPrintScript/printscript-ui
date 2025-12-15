@@ -3,15 +3,16 @@ import {FileType} from "../types/FileType.ts";
 
 export type CompilationEnum =
     'PENDING'   |
-    'PASSED'    |
-    'FAILED'    |
-    'TODO'
+    'COMPILE'    |
+    'NOT COMPILE'    |
+    'NOT CHECKED'
 
 export type SnippetProperty = 'OWNER' | 'SHARED' | 'BOTH'
 
 export type CreateSnippet = {
   name: string;
   content: string;
+  version: string;
   language: string;
   extension: string;
 }

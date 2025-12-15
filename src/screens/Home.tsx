@@ -62,9 +62,19 @@ const HomeScreen = () => {
           </div>
         <SnippetTable loading={isLoading} handleClickSnippet={setSnippetId} snippets={data?.snippets}
                       handleSearchSnippet={handleSearchSnippet}/>
-        <Drawer open={!!snippetId} anchor={"right"} onClose={handleCloseModal}>
-          {snippetId && <SnippetDetail handleCloseModal={handleCloseModal} id={snippetId}/>}
-        </Drawer>
+          <Drawer
+              open={!!snippetId}
+              anchor="right"
+              onClose={handleCloseModal}
+              ModalProps={{
+                  keepMounted: true,
+                  disableEnforceFocus: true,
+              }}
+          >
+              {snippetId && (
+                  <SnippetDetail handleCloseModal={handleCloseModal} id={snippetId} />
+              )}
+          </Drawer>
       </>
   )
 }

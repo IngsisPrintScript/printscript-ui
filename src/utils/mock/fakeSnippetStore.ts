@@ -1,4 +1,4 @@
-import {ComplianceEnum, CreateSnippet, Snippet, UpdateSnippet} from '../snippet'
+import {CompilationEnum, CreateSnippet, Snippet, UpdateSnippet} from '../snippet'
 import {v4 as uuid} from 'uuid'
 import {PaginatedUsers} from "../users.ts";
 import {TestCase} from "../../types/TestCase.ts";
@@ -11,7 +11,8 @@ const INITIAL_SNIPPETS: Snippet[] = [
     id: '9af91631-cdfc-4341-9b8e-3694e5cb3672',
     name: 'Super Snippet',
     content: 'let a : number = 5;\nlet b : number = 5;\n\nprintln(a + b);',
-    compliance: 'pending',
+    version: '1.0',
+    compliance: 'PENDING',
     author: 'John Doe',
     language: 'printscript',
     extension: 'prs'
@@ -20,7 +21,8 @@ const INITIAL_SNIPPETS: Snippet[] = [
     id: 'c48cf644-fbc1-4649-a8f4-9dd7110640d9',
     name: 'Extra cool Snippet',
     content: 'let a : number = 5;\nlet b : number = 5;\n\nprintln(a + b);',
-    compliance: 'not-compliant',
+    version: '1.0',
+    compliance: 'NOT COMPILE',
     author: 'John Doe',
     language: 'printscript',
     extension: 'prs'
@@ -29,7 +31,8 @@ const INITIAL_SNIPPETS: Snippet[] = [
     id: '34bf4b7a-d4a1-48be-bb26-7d9a3be46227',
     name: 'Boaring Snippet',
     content: 'let a : number = 5;\nlet b : number = 5;\n\nprintln(a + b);',
-    compliance: 'compliant',
+    version: '1.0',
+    compliance: 'COMPILE',
     author: 'John Doe',
     language: 'printscript',
     extension: 'prs'
@@ -86,13 +89,11 @@ const INITIAL_FORMATTING_RULES: Rule[] = [
     id: '4',
     name: "no-trailing-spaces",
     isActive: false,
-    value: null
   },
   {
     id: '5',
     name: "no-multiple-empty-lines",
     isActive: false,
-    value: null,
   }
 ]
 
@@ -101,41 +102,41 @@ const INITIAL_LINTING_RULES: Rule[] = [
     id: '1',
     name: "no-expressions-in-print-line",
     isActive: true,
-    value: null
   },
   {
     id: '2',
     name: "no-unused-vars",
     isActive: true,
-    value: null
   },
   {
     id: '3',
     name: "no-undef-vars",
     isActive: false,
-    value: null
   },
   {
     id: '4',
     name: "no-unused-params",
     isActive: false,
-    value: null
   },
 ]
 
 const fakeTestCases: TestCase[] = [
   {
-    id: uuid(),
+    testId: uuid(),
+    snippetId: "1",
     name: "Test Case 1",
     inputs: ["A", "B"],
-    expectedOutputs: ["C", "D"]
+    expectedOutputs: ["C", "D"],
+    envs: {}
   },
   {
-    id: uuid(),
+    testId: uuid(),
+    snippetId: "1",
     name: "Test Case 2",
     inputs: ["E", "F"],
-    expectedOutputs: ["G", "H"]
-  },
+    expectedOutputs: ["G", "H"],
+    envs: {}
+  }
 ]
 
 const fileTypes: FileType[] = [
@@ -169,8 +170,9 @@ export class FakeSnippetStore {
     })
 
     fakeTestCases.forEach(testCase => {
-      this.testCaseMap.set(testCase.id, testCase)
+      this.testCaseMap.set(testCase.testId, testCase)
     })
+
     this.formattingRules = INITIAL_FORMATTING_RULES
     this.lintingRules = INITIAL_LINTING_RULES
   }
@@ -183,7 +185,7 @@ export class FakeSnippetStore {
     const id = uuid();
     const newSnippet = {
       id,
-      compliance: 'compliant' as ComplianceEnum,
+      compliance: 'compliant' as CompilationEnum,
       author: 'yo',
       ...createSnippet
     }
@@ -237,9 +239,18 @@ export class FakeSnippetStore {
   }
 
   postTestCase(testCase: Partial<TestCase>): TestCase {
-    const id = testCase.id ?? uuid()
-    const newTestCase = {...testCase, id} as TestCase
-    this.testCaseMap.set(id,newTestCase)
+    const testId = testCase.testId ?? uuid()
+
+    const newTestCase: TestCase = {
+      testId,
+      snippetId: testCase.snippetId ?? "1",
+      name: testCase.name ?? "New Test",
+      inputs: testCase.inputs ?? [],
+      expectedOutputs: testCase.expectedOutputs ?? [],
+      envs: testCase.envs ?? {}
+    }
+
+    this.testCaseMap.set(testId, newTestCase)
     return newTestCase
   }
 
@@ -254,7 +265,11 @@ export class FakeSnippetStore {
   }
 
   testSnippet(): TestCaseResult {
-    return Math.random() > 0.5 ? "success" : "fail"
+    return {
+      status: Math.random() > 0.5 ? "PASSED" : "FAILED",
+      outputs: ["mock output"],
+      errors: []
+    }
   }
 
   getFileTypes(): FileType[] {

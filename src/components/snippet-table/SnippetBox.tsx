@@ -1,5 +1,6 @@
 import {ReactNode, useEffect, useState} from "react";
 import {Box, BoxProps} from "@mui/material";
+import cocoImg from "../../assets/coco.png";
 
 type SnippetBoxProps = {
   code: string;
@@ -23,13 +24,13 @@ const SnippetBox = (props: SnippetBoxProps) => {
       <Box {...props}>
         {
           showBox ? (
-              <></> // Add easter egg here
+              <Box display="flex" justifyContent="center" alignItems="center">
+                <img src={cocoImg} alt="Coco misterioso" style={{ width: 120, height: 120 }} />
+              </Box>
           ) : children
         }
       </Box>
   )
-
-
 }
 
 export const Bòx = SnippetBox

@@ -1,0 +1,4 @@
+let sarasasasa: string = "sarasasasa";
+let num1: number = 4;
+let num2: number = 5;
+println(num1+num2);
