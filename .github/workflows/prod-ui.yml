@@ -16,6 +16,7 @@ jobs:
       image-name: printscript-ui
       image-tag: prod
       compose-service: ui
+      environment: production
       compose-file: docker-compose.prod.yml
       server-path: /home/ingsis2/infra-ingsis
     secrets: inherit
