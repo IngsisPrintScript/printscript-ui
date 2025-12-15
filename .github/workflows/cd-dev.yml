@@ -1,17 +1,17 @@
-name: UI CI
+name: UI CI - DEV
 
 on:
   push:
     branches:
-      - group-2-main
-
-permissions:
-  contents: write
-  packages: write
+      - group-2-dev
 
 jobs:
-  call-ui-cd:
+  ui-dev:
     uses: IngsisPrintScript/workflows-and-actions/.github/workflows/build-ui.yaml@main
     with:
       image-name: printscript-ui
+      image-tag: dev
+      compose-service: ui
+      compose-file: docker-compose.dev.yml
+      server-path: /home/ingsis2/infra-ingsis
     secrets: inherit
