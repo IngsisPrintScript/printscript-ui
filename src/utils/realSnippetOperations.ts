@@ -1,13 +1,19 @@
-import {SnippetOperations} from './snippetOperations';
-import {httpClient, httpUserClient} from './httpClient';
+import { SnippetOperations } from './snippetOperations';
+import { httpClient, httpUserClient } from './httpClient';
 
-import {CompilationEnum, CreateSnippet, PaginatedSnippets, Snippet, UpdateSnippet} from './snippet';
+import {
+    CompilationEnum,
+    CreateSnippet,
+    PaginatedSnippets,
+    Snippet,
+    UpdateSnippet
+} from './snippet';
 
-import {PaginatedUsers} from './users';
-import {TestCase} from '../types/TestCase';
-import {TestCaseResult} from './queries';
-import {FileType} from '../types/FileType';
-import {Rule} from '../types/Rule';
+import { PaginatedUsers } from './users';
+import { TestCase } from '../types/TestCase';
+import { TestCaseResult } from './queries';
+import { FileType } from '../types/FileType';
+import { Rule } from '../types/Rule';
 
 import {
     adaptBackendRuleToUI,
@@ -15,7 +21,13 @@ import {
     BackendTestCase,
     RunSnippetResponse
 } from './adapters/dataAdapters';
-import {BackendPaginatedSnippets, BackendSnippetListItem} from './backend';
+
+import {
+    BackendPaginatedSnippets,
+    BackendSnippetListItem
+} from './backend';
+
+const API_PREFIX: string = import.meta.env.VITE_API_PREFIX ?? '';
 
 export class RealSnippetOperations implements SnippetOperations {
 
@@ -24,7 +36,8 @@ export class RealSnippetOperations implements SnippetOperations {
     setCurrentSnippetId(id: string | null): void {
         this.currentSnippetId = id;
     }
-// ------------------------------------------------------------
+
+    // ------------------------------------------------------------
     // SNIPPETS
     // ------------------------------------------------------------
 
@@ -37,7 +50,7 @@ export class RealSnippetOperations implements SnippetOperations {
         const body = snippetName ? { name: snippetName } : {};
 
         const response = await httpClient.post<BackendPaginatedSnippets>(
-            `/snippet/filter?page=${page}&page_size=${pageSize}`,
+            `${API_PREFIX}/snippet/filter?page=${page}&page_size=${pageSize}`,
             body
         );
 
@@ -58,13 +71,19 @@ export class RealSnippetOperations implements SnippetOperations {
             content: createSnippet.content
         };
 
-        const response = await httpClient.post<any>(`/snippet/create/text`, dto);
+        const response = await httpClient.post<any>(
+            `${API_PREFIX}/snippet/create/text`,
+            dto
+        );
+
         return this.adaptBackendSnippet(response);
     }
 
     async getSnippetById(id: string): Promise<Snippet | undefined> {
         try {
-            const response = await httpClient.get<any>(`/snippet/${id}`);
+            const response = await httpClient.get<any>(
+                `${API_PREFIX}/snippet/${id}`
+            );
             return this.adaptBackendSnippet(response);
         } catch (err: any) {
             if (err.status === 403 || err.status === 404) return undefined;
@@ -76,6 +95,7 @@ export class RealSnippetOperations implements SnippetOperations {
         id: string,
         updateSnippet: UpdateSnippet
     ): Promise<Snippet> {
+
         const dto = {
             name: updateSnippet.name,
             description: "",
@@ -85,7 +105,7 @@ export class RealSnippetOperations implements SnippetOperations {
         };
 
         const response = await httpClient.put<any>(
-            `/snippet/${id}/update/text`,
+            `${API_PREFIX}/snippet/${id}/update/text`,
             dto
         );
 
@@ -93,7 +113,7 @@ export class RealSnippetOperations implements SnippetOperations {
     }
 
     async deleteSnippet(id: string): Promise<string> {
-        await httpClient.delete(`/snippet/${id}`);
+        await httpClient.delete(`${API_PREFIX}/snippet/${id}`);
         return id;
     }
 
@@ -102,7 +122,7 @@ export class RealSnippetOperations implements SnippetOperations {
         if (!userId) throw new Error("userId requerido");
 
         const response = await httpClient.put<any>(
-            `/snippet/${snippetId}/share`,
+            `${API_PREFIX}/snippet/${snippetId}/share`,
             { userId, action: "READ" }
         );
 
@@ -110,7 +130,7 @@ export class RealSnippetOperations implements SnippetOperations {
     }
 
     // ------------------------------------------------------------
-    // ADAPTER SNIPPET
+    // ADAPTER
     // ------------------------------------------------------------
 
     private adaptBackendSnippet(
@@ -126,7 +146,7 @@ export class RealSnippetOperations implements SnippetOperations {
         return {
             id: backend.id,
             name: backend.name,
-            content: "", // no viene en listado
+            content: "",
             version: backend.version ?? "1.0",
             language: backend.language,
             extension: backend.language === "printscript" ? "pisp" : "txt",
@@ -139,13 +159,18 @@ export class RealSnippetOperations implements SnippetOperations {
     // USERS
     // ------------------------------------------------------------
 
-    async getUserFriends(name?: string, page?: number, pageSize?: number): Promise<PaginatedUsers> {
+    async getUserFriends(
+        name?: string,
+        page?: number,
+        pageSize?: number
+    ): Promise<PaginatedUsers> {
+
         const params: any = {};
         if (name) params.name = name;
         if (page !== undefined) params.page = page;
         if (pageSize !== undefined) params.page_size = pageSize;
 
-        return await httpUserClient.get<PaginatedUsers>(`/users`, params);
+        return httpUserClient.get<PaginatedUsers>(`/users`, params);
     }
 
     // ------------------------------------------------------------
@@ -156,37 +181,48 @@ export class RealSnippetOperations implements SnippetOperations {
         const id = snippetId ?? this.currentSnippetId;
 
         const data = await httpClient.get<BackendTestCase[]>(
-            `/test`,
+            `${API_PREFIX}/test`,
             { snippetId: id }
         );
 
         return data.map(adaptBackendTestCaseToUI);
     }
 
-    async postTestCase(testCase: Partial<TestCase>, snippetId: string): Promise<TestCase> {
+    async postTestCase(
+        testCase: Partial<TestCase>,
+        snippetId: string
+    ): Promise<TestCase> {
+
         const dto = {
-            snippetId : snippetId || this.currentSnippetId,
+            snippetId: snippetId || this.currentSnippetId,
             name: testCase.name ?? "New Test",
             inputs: testCase.inputs ?? [],
             expectedOutputs: testCase.expectedOutputs ?? [],
             envs: testCase.envs ?? {}
         };
 
-        const r = await httpClient.post<BackendTestCase>(`/test/create`, dto);
+        const r = await httpClient.post<BackendTestCase>(
+            `${API_PREFIX}/test/create`,
+            dto
+        );
+
         return adaptBackendTestCaseToUI(r);
     }
 
     async removeTestCase(id: string): Promise<string> {
-        await httpClient.delete(`/test`, { testId: id });
+        await httpClient.delete(
+            `${API_PREFIX}/test`,
+            { testId: id }
+        );
         return id;
     }
 
     async testSnippet(testCase: Partial<TestCase>): Promise<TestCaseResult> {
-        return await httpClient.post<TestCaseResult>(
-            `/test/run`,
+        return httpClient.post<TestCaseResult>(
+            `${API_PREFIX}/test/run`,
             {
                 testCaseId: testCase.testId,
-                snippetId: testCase.snippetId,
+                snippetId: testCase.snippetId
             }
         );
     }
@@ -202,7 +238,7 @@ export class RealSnippetOperations implements SnippetOperations {
         };
 
         const r = await httpClient.put<BackendTestCase>(
-            `/test/update`,
+            `${API_PREFIX}/test/update`,
             dto
         );
 
@@ -215,29 +251,21 @@ export class RealSnippetOperations implements SnippetOperations {
 
     async getFormatRules(): Promise<Rule[]> {
         const data = await httpClient.get<any>(
-            '/rules',
+            `${API_PREFIX}/rules`,
             { type: 'FORMATTING' }
         );
 
-        if (!Array.isArray(data)) {
-            console.error('Invalid format rules response', data);
-            return [];
-        }
-
+        if (!Array.isArray(data)) return [];
         return data.map(adaptBackendRuleToUI);
     }
 
     async getLintingRules(): Promise<Rule[]> {
         const data = await httpClient.get<any>(
-            '/rules',
+            `${API_PREFIX}/rules`,
             { type: 'LINT' }
         );
 
-        if (!Array.isArray(data)) {
-            console.error('Invalid linting rules response', data);
-            return [];
-        }
-
+        if (!Array.isArray(data)) return [];
         return data.map(adaptBackendRuleToUI);
     }
 
@@ -247,12 +275,11 @@ export class RealSnippetOperations implements SnippetOperations {
             value: String(rule.value ?? '')
         }));
 
-        return await httpClient.put<Rule[]>(
-            '/rules/update',
+        return httpClient.put<Rule[]>(
+            `${API_PREFIX}/rules/update`,
             payload
         );
     }
-
 
     async modifyLintingRule(rules: Rule[]): Promise<Rule[]> {
         const payload = rules.map(rule => ({
@@ -260,14 +287,17 @@ export class RealSnippetOperations implements SnippetOperations {
             value: String(rule.value ?? '')
         }));
 
-        return await httpClient.put<Rule[]>(
-            '/rules/update',
+        return httpClient.put<Rule[]>(
+            `${API_PREFIX}/rules/update`,
             payload
         );
     }
 
     async initializeRules(): Promise<void> {
-        await httpClient.post('/rules/initialize', {});
+        await httpClient.post(
+            `${API_PREFIX}/rules/initialize`,
+            {}
+        );
     }
 
     // ------------------------------------------------------------
@@ -276,9 +306,10 @@ export class RealSnippetOperations implements SnippetOperations {
 
     async formatSnippet(snippetId: string): Promise<string> {
         const status = await httpClient.get<string>(
-            '/rules/format',
+            `${API_PREFIX}/rules/format`,
             { snippetId }
         );
+
         if (status === 'VALID') {
             const snip = await this.getSnippetById(snippetId);
             return snip?.content ?? '';
@@ -299,9 +330,9 @@ export class RealSnippetOperations implements SnippetOperations {
         inputs: string[],
         envs: Record<string, string>
     ): Promise<RunSnippetResponse> {
-        return httpClient.post(`/snippet/${snippetId}/execute`, {
-            inputs,
-            envs
-        });
+        return httpClient.post(
+            `${API_PREFIX}/snippet/${snippetId}/execute`,
+            { inputs, envs }
+        );
     }
 }
