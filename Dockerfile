@@ -35,17 +35,11 @@ RUN npm run build
 # -------------------------------
 FROM nginx:1.27-alpine
 
-# Copiar build estático
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Remover config default
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Configuración custom de nginx
-COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Exponer puerto interno
 EXPOSE 80
-
-# Run nginx
 CMD ["nginx", "-g", "daemon off;"]
