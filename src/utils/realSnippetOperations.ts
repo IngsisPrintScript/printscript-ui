@@ -214,19 +214,31 @@ export class RealSnippetOperations implements SnippetOperations {
     // ------------------------------------------------------------
 
     async getFormatRules(): Promise<Rule[]> {
-        const backendRules = await httpClient.get<any[]>(
+        const data = await httpClient.get<any>(
             '/rules',
             { type: 'FORMATTING' }
         );
-        return backendRules.map(adaptBackendRuleToUI);
+
+        if (!Array.isArray(data)) {
+            console.error('Invalid format rules response', data);
+            return [];
+        }
+
+        return data.map(adaptBackendRuleToUI);
     }
 
     async getLintingRules(): Promise<Rule[]> {
-        const backendRules = await httpClient.get<any[]>(
+        const data = await httpClient.get<any>(
             '/rules',
             { type: 'LINT' }
         );
-        return backendRules.map(adaptBackendRuleToUI);
+
+        if (!Array.isArray(data)) {
+            console.error('Invalid linting rules response', data);
+            return [];
+        }
+
+        return data.map(adaptBackendRuleToUI);
     }
 
     async modifyFormatRule(rules: Rule[]): Promise<Rule[]> {
