@@ -146,7 +146,7 @@ export class RealSnippetOperations implements SnippetOperations {
         return {
             id: backend.id,
             name: backend.name,
-            content: "",
+            content: backend.content,
             version: backend.version ?? "1.0",
             language: backend.language,
             extension: backend.language === "printscript" ? "pisp" : "txt",

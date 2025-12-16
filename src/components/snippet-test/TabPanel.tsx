@@ -1,21 +1,20 @@
 import { useEffect, useState } from "react";
-import { TestCase } from "../../types/TestCase";
+import { TestCase } from "../../types/TestCase.ts";
 import {
     Autocomplete,
     Box,
     Button,
     Chip,
     TextField,
-    Typography
 } from "@mui/material";
 import { BugReport, Delete, Save } from "@mui/icons-material";
-import { useTestSnippet } from "../../utils/queries";
+import { useTestSnippet } from "../../utils/queries.tsx";
 
 type TabPanelProps = {
     index: number;
     value: number;
     test?: TestCase;
-    saveTest: (test: Partial<TestCase>) => void;
+    saveTest: (test: Partial<TestCase>) => Promise<void>;
     removeTest?: () => void;
 };
 
@@ -27,20 +26,15 @@ export const TabPanel = ({
                              removeTest
                          }: TabPanelProps) => {
 
-    const [testData, setTestData] = useState<Partial<TestCase>>(
-        test ?? {
-            name: "",
-            inputs: [],
-            expectedOutputs: [],
-            envs: {}
-        }
-    );
+    const [testData, setTestData] = useState<Partial<TestCase>>({
+        name: "",
+        inputs: [],
+        expectedOutputs: [],
+        envs: {}
+    });
 
     const { mutateAsync: testSnippet, data } = useTestSnippet();
 
-    /**
-     * Sincroniza el test recibido por props con el estado local
-     */
     useEffect(() => {
         if (!test) return;
 
@@ -50,168 +44,83 @@ export const TabPanel = ({
             expectedOutputs: test.expectedOutputs,
             envs: test.envs ?? {}
         });
-    }, [test]);
+    }, [test?.testId]);
 
-    /**
-     * Maneja cambios en el input de variables de entorno
-     */
     const handleEnvChange = (envString: string) => {
-        const pairs = envString
+        const envs: Record<string, string> = {};
+
+        envString
             .split(";")
             .map(v => v.trim())
-            .filter(v => v.length > 0);
+            .filter(Boolean)
+            .forEach(pair => {
+                const [k, v] = pair.split("=");
+                if (k && v) envs[k.trim()] = v.trim();
+            });
 
-        const envMap: Record<string, string> = {};
-        pairs.forEach(p => {
-            const [k, v] = p.split("=");
-            if (k && v) {
-                envMap[k.trim()] = v.trim();
-            }
-        });
-
-        setTestData(prev => ({
-            ...prev,
-            envs: envMap
-        }));
+        setTestData(prev => ({ ...prev, envs }));
     };
 
-    /**
-     * String derivado desde envs (no necesita estado propio)
-     */
     const envString = Object.entries(testData.envs ?? {})
         .map(([k, v]) => `${k}=${v}`)
         .join(";");
 
     const renderStatus = () => {
-        if (!data) {
-            return <Chip label="Pending" color="warning" size="small" />;
-        }
+        if (!data) return <Chip label="Pending" color="warning" size="small" />;
 
-        switch (data.status) {
-            case "PASSED":
-                return <Chip label="Pass" color="success" size="small" />;
-            case "FAILED":
-                return <Chip label="Fail" color="error" size="small" />;
-            default:
-                return <Chip label="Pending" color="warning" size="small" />;
-        }
+        return data.status === "PASSED"
+            ? <Chip label="Pass" color="success" size="small" />
+            : <Chip label="Fail" color="error" size="small" />;
     };
 
     return (
-        <div hidden={value !== index} style={{ width: "100%", height: "100%" }}>
+        <div hidden={value !== index} style={{ width: "100%" }}>
             {value === index && (
-                <Box
-                    sx={{ px: 3 }}
-                    display="flex"
-                    flexDirection="column"
-                    gap={2}
-                >
+                <Box sx={{ px: 3 }} display="flex" flexDirection="column" gap={2}>
 
-                    {/* NAME */}
-                    <Box>
-                        <Typography fontWeight="bold">Name</Typography>
-                        <TextField
-                            size="small"
-                            value={testData.name ?? ""}
-                            onChange={(e) =>
-                                setTestData({
-                                    ...testData,
-                                    name: e.target.value
-                                })
-                            }
-                        />
-                    </Box>
+                    <TextField
+                        label="Name"
+                        size="small"
+                        value={testData.name ?? ""}
+                        onChange={e => setTestData({ ...testData, name: e.target.value })}
+                    />
 
-                    {/* INPUTS */}
-                    <Box>
-                        <Typography fontWeight="bold">Inputs</Typography>
-                        <Autocomplete
-                            multiple
-                            freeSolo
-                            size="small"
-                            value={testData.inputs ?? []}
-                            onChange={(_, value) =>
-                                setTestData({
-                                    ...testData,
-                                    inputs: value
-                                })
-                            }
-                            renderTags={(value, getProps) =>
-                                value.map((v, i) => (
-                                    <Chip
-                                        label={v}
-                                        {...getProps({ index: i })}
-                                    />
-                                ))
-                            }
-                            renderInput={(params) =>
-                                <TextField {...params} />
-                            }
-                            options={[]}
-                        />
-                    </Box>
+                    <Autocomplete
+                        multiple
+                        freeSolo
+                        size="small"
+                        value={testData.inputs ?? []}
+                        onChange={(_, v) => setTestData({ ...testData, inputs: v })}
+                        renderInput={p => <TextField {...p} label="Inputs" />}
+                        options={[]}
+                    />
 
-                    {/* EXPECTED OUTPUTS */}
-                    <Box>
-                        <Typography fontWeight="bold">Expected Outputs</Typography>
-                        <Autocomplete
-                            multiple
-                            freeSolo
-                            size="small"
-                            value={testData.expectedOutputs ?? []}
-                            onChange={(_, value) =>
-                                setTestData({
-                                    ...testData,
-                                    expectedOutputs: value
-                                })
-                            }
-                            renderTags={(value, getProps) =>
-                                value.map((v, i) => (
-                                    <Chip
-                                        label={v}
-                                        {...getProps({ index: i })}
-                                    />
-                                ))
-                            }
-                            renderInput={(params) =>
-                                <TextField {...params} />
-                            }
-                            options={[]}
-                        />
-                    </Box>
+                    <Autocomplete
+                        multiple
+                        freeSolo
+                        size="small"
+                        value={testData.expectedOutputs ?? []}
+                        onChange={(_, v) => setTestData({ ...testData, expectedOutputs: v })}
+                        renderInput={p => <TextField {...p} label="Expected Outputs" />}
+                        options={[]}
+                    />
 
-                    {/* ENVS */}
-                    <Box>
-                        <Typography fontWeight="bold">
-                            Environment Variables
-                        </Typography>
-                        <TextField
-                            size="small"
-                            placeholder="VAR=123;FOO=bar"
-                            value={envString}
-                            onChange={(e) =>
-                                handleEnvChange(e.target.value)
-                            }
-                            helperText="Formato: VAR=123;FOO=bar"
-                        />
-                    </Box>
+                    <TextField
+                        label="Environment Variables"
+                        size="small"
+                        placeholder="VAR=123;FOO=bar"
+                        value={envString}
+                        onChange={e => handleEnvChange(e.target.value)}
+                    />
 
-                    {/* ACTIONS */}
-                    <Box display="flex" alignItems="center" gap={1}>
-
+                    <Box display="flex" gap={1} alignItems="center">
                         {removeTest && test?.testId && (
-                            <Button
-                                variant="outlined"
-                                color="error"
-                                startIcon={<Delete />}
-                                onClick={removeTest}
-                            >
+                            <Button color="error" startIcon={<Delete />} onClick={removeTest}>
                                 Remove
                             </Button>
                         )}
 
                         <Button
-                            variant="outlined"
                             startIcon={<Save />}
                             disabled={!testData.name}
                             onClick={() => saveTest(testData)}
@@ -224,17 +133,13 @@ export const TabPanel = ({
                             startIcon={<BugReport />}
                             disabled={!test?.testId}
                             onClick={() =>
-                                testSnippet({
-                                    testId: test!.testId,
-                                    snippetId: test!.snippetId
-                                })
+                                testSnippet({ testId: test!.testId, snippetId: test!.snippetId })
                             }
                         >
                             Test
                         </Button>
 
                         <Box flexGrow={1} />
-
                         {renderStatus()}
                     </Box>
                 </Box>
