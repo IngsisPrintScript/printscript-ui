@@ -1,6 +1,6 @@
 import { Box, Divider, Tab, Tabs, Typography } from "@mui/material";
-import { ModalWrapper } from "../../../../../../Downloads/printscript-ui/src/components/common/ModalWrapper.tsx";
-import { SyntheticEvent, useState } from "react";
+import { ModalWrapper } from "../common/ModalWrapper.tsx";
+import {SyntheticEvent, useEffect, useState} from "react";
 import { AddRounded } from "@mui/icons-material";
 import {
     useGetTestCases,
@@ -9,6 +9,7 @@ import {
     useUpdateTestCase
 } from "../../utils/queries.tsx";
 import { TabPanel } from "./TabPanel.tsx";
+import {TestCase} from "../../types/TestCase.ts";
 
 type Props = {
     open: boolean;
@@ -26,10 +27,15 @@ export const TestSnippetModal = ({ open, onClose, snippetId }: Props) => {
 
     const handleChange = (_: SyntheticEvent, v: number) => setValue(v);
 
-    const handleCreateTest = async (test: any) => {
+    const handleCreateTest = async (test: Partial<TestCase>): Promise<void> => {
         await postTestCase({ ...test, snippetId });
-        setValue(testCases.length);
     };
+
+    useEffect(() => {
+        if (testCases.length > 0) {
+            setValue(testCases.length - 1);
+        }
+    }, [testCases.length]);
 
     return (
         <ModalWrapper open={open} onClose={onClose}>
@@ -49,17 +55,20 @@ export const TestSnippetModal = ({ open, onClose, snippetId }: Props) => {
                     <Tab icon={<AddRounded />} value={testCases.length} />
                 </Tabs>
 
-                {testCases.map((t, i) => (
+                {testCases.map((testCase, index) => (
                     <TabPanel
-                        id
-                        key={t.testId}
-                        index={i}
+                        key={testCase.testId}
+                        index={index}
                         value={value}
-                        test={t}
-                        saveTest={(partial) =>
-                            updateTest({ ...t, ...partial, snippetId })
-                        }
-                        removeTest={() => deleteTestCase(t.testId)}
+                        test={testCase}
+                        saveTest={async (partial) => {
+                            await updateTest({
+                                ...testCase,
+                                ...partial,
+                                snippetId
+                            });
+                        }}
+                        removeTest={() => deleteTestCase(testCase.testId)}
                     />
                 ))}
 

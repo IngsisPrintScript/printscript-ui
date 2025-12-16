@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TestCase } from "../../../../../../Downloads/printscript-ui/src/types/TestCase.ts";
+import { TestCase } from "../../types/TestCase.ts";
 import {
     Autocomplete,
     Box,
@@ -8,7 +8,7 @@ import {
     TextField,
 } from "@mui/material";
 import { BugReport, Delete, Save } from "@mui/icons-material";
-import { useTestSnippet } from "../../../../../../Downloads/printscript-ui/src/utils/queries.tsx";
+import { useTestSnippet } from "../../utils/queries.tsx";
 
 type TabPanelProps = {
     index: number;
@@ -35,7 +35,6 @@ export const TabPanel = ({
 
     const { mutateAsync: testSnippet, data } = useTestSnippet();
 
-    // 🔑 sincroniza cuando cambia el test REAL
     useEffect(() => {
         if (!test) return;
 

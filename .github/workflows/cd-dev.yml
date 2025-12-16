@@ -2,7 +2,7 @@ name: UI CD - DEV
 
 on:
   push:
-    branches: [ "group-2-dev" ]
+    branches: [ "group-2-dev","fixes" ]
 
 permissions:
   contents: write
