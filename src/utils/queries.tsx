@@ -121,6 +121,19 @@ export const useUpdateTestCase = (snippetId: string) => {
       }
   );
 };
+export const useDownloadSnippet = () => {
+  const snippetOps = new RealSnippetOperations();
+  return useMutation({
+    mutationFn: ({
+                   snippetId,
+                   version,
+                 }: {
+      snippetId: string;
+      version: "original" | "formatted";
+    }) => snippetOps.downloadSnippet(snippetId, version),
+  });
+};
+
 export const useRemoveTestCase = (snippetId: string) => {
   const snippetOperations = useSnippetsOperations()
   return useMutation<string, Error, string>(

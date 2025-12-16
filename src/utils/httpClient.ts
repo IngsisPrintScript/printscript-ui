@@ -13,7 +13,6 @@ export class HttpClient {
     this.baseURL = baseURL;
   }
 
-
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -36,6 +35,7 @@ export class HttpClient {
         ...options.headers,
       },
     });
+
 
     if (!response.ok) {
       const error: HttpError = {
@@ -124,7 +124,43 @@ export class HttpClient {
       body: JSON.stringify(body),
     });
   }
+  async getBlob(
+      endpoint: string,
+      params?: Record<string, any>
+  ): Promise<Blob> {
+    const url = new URL(`${this.baseURL}${endpoint}`);
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.set(key, String(value));
+        }
+      });
+    }
+
+    const headers: HeadersInit = {};
+    const token = await getToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      const error: HttpError = {
+        status: response.status,
+        message: `HTTP Error: ${response.status} ${response.statusText}`,
+      };
+      throw error;
+    }
+
+    return response.blob();
+  }
 }
+
 
 // Instancia singleton del cliente HTTP
 export const httpClient = new HttpClient(import.meta.env.VITE_API_BASE_URL);

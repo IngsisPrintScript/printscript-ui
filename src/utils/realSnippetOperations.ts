@@ -335,4 +335,13 @@ export class RealSnippetOperations implements SnippetOperations {
             { inputs, envs }
         );
     }
+    async downloadSnippet(
+        snippetId: string,
+        version: "original" | "formatted"
+    ): Promise<Blob> {
+        return httpClient.getBlob(
+            `${API_PREFIX}/snippet/${snippetId}/download`,
+            { version }
+        );
+    }
 }

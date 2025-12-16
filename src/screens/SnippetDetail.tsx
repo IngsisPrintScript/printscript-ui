@@ -4,6 +4,8 @@ import { highlight, languages } from "prismjs";
 import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
 import "prismjs/themes/prism-okaidia.css";
+import { DownloadModal } from "../components/snippet-detail/DownloadModal.tsx";
+import { downloadBlob } from "../utils/download";
 
 import {
     Alert,
@@ -28,6 +30,7 @@ import {
 import ReadMoreIcon from "@mui/icons-material/ReadMore";
 
 import {
+    useDownloadSnippet,
     useFormatSnippet,
     useGetSnippetById,
     useShareSnippet,
@@ -38,7 +41,6 @@ import { Bòx } from "../components/snippet-table/SnippetBox.tsx";
 import { ShareSnippetModal } from "../components/snippet-detail/ShareSnippetModal.tsx";
 import { TestSnippetModal } from "../components/snippet-test/TestSnippetModal.tsx";
 import { DeleteConfirmationModal } from "../components/snippet-detail/DeleteConfirmationModal.tsx";
-import { Snippet } from "../utils/snippet.ts";
 import { SnippetExecution } from "./SnippetExecution.tsx";
 import { queryClient } from "../App.tsx";
 
@@ -47,27 +49,27 @@ type SnippetDetailProps = {
     handleCloseModal: () => void;
 };
 
-const DownloadButton = ({ snippet }: { snippet?: Snippet }) => {
-    if (!snippet) return null;
-
-    const file = new Blob([snippet.content], { type: "text/plain" });
-
-    return (
-        <Tooltip title="Download">
-            <IconButton data-testid="snippet-download-button">
-                <a
-                    download={`${snippet.name}.${snippet.extension}`}
-                    href={URL.createObjectURL(file)}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ display: "flex", color: "inherit" }}
-                >
-                    <Download />
-                </a>
-            </IconButton>
-        </Tooltip>
-    );
-};
+// const DownloadButton = ({ snippet }: { snippet?: Snippet }) => {
+//     if (!snippet) return null;
+//
+//     const file = new Blob([snippet.content], { type: "text/plain" });
+//
+//     return (
+//         <Tooltip title="Download">
+//             <IconButton data-testid="snippet-download-button">
+//                 <a
+//                     download={`${snippet.name}.${snippet.extension}`}
+//                     href={URL.createObjectURL(file)}
+//                     target="_blank"
+//                     rel="noreferrer"
+//                     style={{ display: "flex", color: "inherit" }}
+//                 >
+//                     <Download />
+//                 </a>
+//             </IconButton>
+//         </Tooltip>
+//     );
+// };
 
 export const SnippetDetail = ({ id, handleCloseModal }: SnippetDetailProps) => {
     const [code, setCode] = useState("");
@@ -75,9 +77,16 @@ export const SnippetDetail = ({ id, handleCloseModal }: SnippetDetailProps) => {
     const [openTest, setOpenTest] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
     const [runSnippet, setRunSnippet] = useState(false);
+    const [openDownload, setOpenDownload] = useState(false);
 
     const { data: snippet, isLoading } = useGetSnippetById(id);
     const { mutate: shareSnippet, isLoading: loadingShare } = useShareSnippet();
+
+    const {
+        mutateAsync: downloadSnippet,
+        isLoading: downloadingFormatted,
+    } = useDownloadSnippet();
+
     const { mutate: formatSnippet, isLoading: isFormatLoading, data: formatted } =
         useFormatSnippet();
 
@@ -98,6 +107,7 @@ export const SnippetDetail = ({ id, handleCloseModal }: SnippetDetailProps) => {
         shareSnippet({ snippetId: id, userId });
         setOpenShare(false);
     };
+
 
     return (
         <Box p={4} minWidth="60vw">
@@ -139,7 +149,15 @@ export const SnippetDetail = ({ id, handleCloseModal }: SnippetDetailProps) => {
                             </IconButton>
                         </Tooltip>
 
-                        <DownloadButton snippet={snippet} />
+                        {/*<DownloadButton snippet={snippet} />*/}
+                        <Tooltip title="Download">
+                            <IconButton
+                                data-testid="snippet-download-button"
+                                onClick={() => setOpenDownload(true)}
+                            >
+                                <Download />
+                            </IconButton>
+                        </Tooltip>
 
                         <Tooltip title={runSnippet ? "Stop" : "Run"}>
                             <IconButton
@@ -251,6 +269,32 @@ export const SnippetDetail = ({ id, handleCloseModal }: SnippetDetailProps) => {
                 id={snippet?.id ?? ""}
                 setCloseDetails={handleCloseModal}
             />
+            {snippet && (
+                <DownloadModal
+                    open={openDownload}
+                    onClose={() => setOpenDownload(false)}
+                    isLoadingFormatted={downloadingFormatted}
+                    onDownloadOriginal={async () => {
+                        const blob = await downloadSnippet({
+                            snippetId: id,
+                            version: "original",
+                        });
+                        downloadBlob(blob, `${snippet.name}.${snippet.extension}`);
+                        setOpenDownload(false);
+                    }}
+                    onDownloadFormatted={async () => {
+                        const blob = await downloadSnippet({
+                            snippetId: id,
+                            version: "formatted",
+                        });
+                        downloadBlob(
+                            blob,
+                            `${snippet.name}-formatted.${snippet.extension}`
+                        );
+                        setOpenDownload(false);
+                    }}
+                />
+            )}
         </Box>
     );
 };
