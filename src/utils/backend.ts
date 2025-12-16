@@ -14,6 +14,7 @@ export interface BackendSnippetListItem {
     version: string;
     author: string;
     status: "PASSED" | "FAILED" | "PENDING";
+    content: string;
 }
 
 export interface BackendPaginatedSnippets {
